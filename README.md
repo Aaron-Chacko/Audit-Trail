@@ -8,7 +8,7 @@ Unlike traditional CRUD applications that overwrite the current state of an enti
 
 ---
 
-## 📌 Problem Statement
+## Problem Statement
 
 Traditional CRUD systems focus on storing the current state of an entity.
 
