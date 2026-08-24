@@ -8,7 +8,7 @@ Unlike traditional CRUD applications that overwrite the current state of an enti
 
 ---
 
-## 📌 Problem Statement
+## Problem Statement
 
 Traditional CRUD systems focus on storing the current state of an entity.
 
@@ -42,7 +42,7 @@ The complete event history becomes the source of truth for reconstructing the cu
 
 ---
 
-## 🎯 Use Case
+## Use Case
 
 A logistics manager views the Audit Trail dashboard for a specific shipping container.
 
@@ -71,7 +71,7 @@ This allows the manager to:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```text
                          ┌──────────────────────┐
@@ -109,7 +109,7 @@ This allows the manager to:
 
 ---
 
-## 🔄 Event Sourcing
+## Event Sourcing
 
 Event Sourcing treats events as the source of truth instead of storing only the current state.
 
@@ -148,7 +148,7 @@ Current State
 
 ---
 
-## 🧩 CQRS
+## CQRS
 
 Audit Trail separates operations that modify the system from operations that retrieve information.
 
@@ -184,7 +184,7 @@ Separating Commands and Queries allows the write and read sides of the applicati
 
 ---
 
-## 🗄️ Event Store
+## Event Store
 
 MongoDB is used as the Event Store.
 
@@ -216,7 +216,7 @@ Example:
 
 ---
 
-## 📊 Read Models & Projections
+## Read Models & Projections
 
 An event stream can become large over time. Replaying every event for every query would therefore be inefficient.
 
@@ -240,7 +240,7 @@ The projection layer processes new events and updates a separate MongoDB collect
 
 ---
 
-## ⏪ Historical State Reconstruction
+## Historical State Reconstruction
 
 One of the key capabilities of Audit Trail is reconstructing the state of a shipment at a specific point in time.
 
@@ -257,7 +257,7 @@ The frontend will provide a state-scrubbing interface that allows users to rewin
 
 ---
 
-## 🔐 Optimistic Concurrency Control
+## Optimistic Concurrency Control
 
 Audit Trail uses **Optimistic Concurrency Control (OCC)** to prevent conflicting commands from corrupting an aggregate.
 
@@ -285,7 +285,7 @@ If the event version has changed since a client retrieved the aggregate, the com
 
 ---
 
-## 📈 Sensor Analytics
+## Sensor Analytics
 
 The dashboard will use **Recharts** to visualize logistics sensor data alongside the event timeline.
 
@@ -299,7 +299,7 @@ Planned visualizations include:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 
@@ -328,7 +328,7 @@ Planned visualizations include:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 The project structure is organized around the CQRS and Event Sourcing architecture rather than a traditional CRUD controller/model structure.
 
@@ -425,7 +425,7 @@ audit-trail/
 
 ---
 
-## 🚀 Development Roadmap
+## Development Roadmap
 
 ### Week 1 — CQRS Setup
 
@@ -466,7 +466,7 @@ audit-trail/
 
 ---
 
-## 🔍 Example Event Stream
+## Example Event Stream
 
 A shipment could generate the following event sequence:
 
@@ -490,7 +490,7 @@ The aggregate's state is derived from the sequence of events rather than relying
 
 ---
 
-## ⚖️ CRUD vs Event Sourcing
+## CRUD vs Event Sourcing
 
 | Traditional CRUD | Audit Trail |
 |---|---|
@@ -504,7 +504,7 @@ The aggregate's state is derived from the sequence of events rather than relying
 
 ---
 
-## 🎯 Project Goals
+## Project Goals
 
 Audit Trail is designed to demonstrate practical understanding of:
 
@@ -524,15 +524,9 @@ The project intentionally moves beyond basic CRUD development toward **enterpris
 
 ---
 
-## 📌 Status
-
-🚧 **In Development**
-
-The project is being developed incrementally, beginning with the CQRS foundation and Event Store before progressing to projections, historical state reconstruction, concurrency control, and analytics.
-
 ---
 
-## 📄 Project Specification
+## Project Specification
 
 This project is part of the **Axlero Solutions Advanced MERN Stack Engineering** project series.
 
