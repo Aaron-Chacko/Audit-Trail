@@ -166,7 +166,60 @@ server/
     ├── utils/           # api-response.js, app-errors.js
     ├── app.js           # Express app factory
     └── server.js        # Entry point
+
+client/
+└── src/
+    ├── api/             # client.js (axios instance + interceptor), shipments.js
+    ├── components/
+    │   ├── common/      # Card, ErrorMessage, Loader, StatusBadge
+    │   └── layout/      # PageWrapper (Navbar + container)
+    ├── constants/       # event-types.js (mirrors backend)
+    ├── hooks/           # useShipment.js, useEventHistory.js
+    ├── pages/           # Dashboard.jsx, Timeline.jsx
+    ├── styles/          # global.css (design tokens & base reset)
+    ├── utils/           # date-helpers.js, formatters.js
+    ├── App.jsx          # React Router configuration
+    └── main.jsx         # DOM render entry point
 ```
+
+---
+
+## 14. Frontend Conventions
+
+### 14.1 Functional Components & Hooks
+- Use **functional components only** with React hooks — no class components.
+- Keep components focused and modular. Put reusable components in `components/common/` and composite page views in `pages/`.
+
+### 14.2 API Communication via `/api`
+- **All HTTP requests must route through `client/src/api/` modules** (e.g. `api/shipments.js`).
+- Never call `axios` or `fetch` directly inside React components or page files.
+- The centralized `api/client.js` Axios instance automatically unwraps the `{ success, data, error }` envelope:
+  - On `success: true`, caller directly receives `data`.
+  - On HTTP error or `success: false`, an enhanced `Error` is thrown with `.status` and `.details`.
+
+### 14.3 Styling Approach
+- Use **CSS Modules** (`<ComponentName>.module.css`) for all component-level styles.
+- Global design tokens (colors, spacing, typography, radii) are defined as CSS variables in `styles/global.css`.
+- Avoid ad-hoc inline styles except for dynamic calculated styles (e.g. chart dimensions, custom positioning).
+
+### 14.4 Shared Event-Type Constants
+- `client/src/constants/event-types.js` must stay in exact sync with `server/src/events/event-types.js`.
+- Never use raw event type strings in UI components; import named constants from `@/constants/event-types.js`.
+- Use `EVENT_TYPE_LABELS` and `ALERT_EVENT_TYPES` from `constants/event-types.js` for formatting and alerting logic in the UI.
+
+### 14.5 Frontend Naming Conventions
+| Context | Convention | Example |
+|---|---|---|
+| React Components & files | `PascalCase` | `ShipmentCard.jsx`, `PageWrapper.jsx` |
+| CSS Module files | `PascalCase.module.css` | `PageWrapper.module.css` |
+| Custom hooks | `camelCase` starting with `use` | `useShipment.js`, `useEventHistory.js` |
+| Utility & API files | `kebab-case` | `date-helpers.js`, `event-types.js` |
+| Functions & variables | `camelCase` | `formatEventTimestamp`, `isLoading` |
+
+### 14.6 Environment Configuration
+- Client configuration uses Vite's `import.meta.env` with the `VITE_` prefix.
+- The backend URL is referenced via `VITE_API_BASE_URL` (defaulting to the Vite dev proxy `/api` in local development).
+- Never hardcode API hostnames or ports in source files.
 
 ---
 
