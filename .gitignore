@@ -1,3 +1,13 @@
+# Environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+server/node_modules/
+client/node_modules/
+
 # Logs
 logs
 *.log
