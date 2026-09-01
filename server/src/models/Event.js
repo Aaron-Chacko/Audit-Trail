@@ -23,6 +23,7 @@
 
 import mongoose from 'mongoose';
 import { ALL_EVENT_TYPES } from '../events/event-types.js';
+import { ImmutabilityViolation } from '../utils/app-errors.js';
 
 const { Schema } = mongoose;
 
@@ -149,12 +150,6 @@ eventSchema.index({ eventType: 1, timestamp: -1 });
  * These hooks fire BEFORE the DB operation so they prevent accidents
  * even when someone bypasses the service layer.
  */
-
-const MUTATION_ERROR = new Error(
-  '[EventStore] The event store is append-only. Updates and deletes are forbidden.'
-);
-MUTATION_ERROR.name = 'ImmutabilityViolation';
-
 const BLOCKED_OPS = [
   'updateOne',
   'updateMany',
@@ -168,12 +163,78 @@ const BLOCKED_OPS = [
 
 for (const op of BLOCKED_OPS) {
   eventSchema.pre(op, function () {
-    throw MUTATION_ERROR;
+    throw new ImmutabilityViolation(
+      `[EventStore] Operation "${op}" is forbidden. The event store is strictly append-only.`
+    );
   });
 }
+
+// ─── Static Query Methods ──────────────────────────────────────────────────────
+
+/**
+ * Retrieve the full chronological event stream for a given aggregate.
+ * @param {string} aggregateId
+ * @param {Object} [options]
+ * @param {number} [options.sort=1] - 1 for ascending (chronological), -1 for descending
+ * @returns {Promise<Array>}
+ */
+eventSchema.statics.findByAggregateId = function (aggregateId, { sort = 1 } = {}) {
+  return this.find({ aggregateId }).sort({ version: sort }).lean().exec();
+};
+
+/**
+ * Get the current highest version number recorded for an aggregate.
+ * Returns 0 if no events exist yet for this aggregate.
+ * @param {string} aggregateId
+ * @returns {Promise<number>}
+ */
+eventSchema.statics.getMaxVersion = async function (aggregateId) {
+  const latestEvent = await this.findOne({ aggregateId })
+    .sort({ version: -1 })
+    .select({ version: 1 })
+    .lean()
+    .exec();
+
+  return latestEvent ? latestEvent.version : 0;
+};
+
+/**
+ * Retrieve events appended strictly after a specific version.
+ * Useful for incremental projections.
+ * @param {string} aggregateId
+ * @param {number} sinceVersion
+ * @returns {Promise<Array>}
+ */
+eventSchema.statics.getEventsSince = function (aggregateId, sinceVersion) {
+  return this.find({
+    aggregateId,
+    version: { $gt: sinceVersion },
+  })
+    .sort({ version: 1 })
+    .lean()
+    .exec();
+};
+
+/**
+ * Retrieve events up to a given historical point in time.
+ * @param {string} aggregateId
+ * @param {Date|string} targetTimestamp
+ * @returns {Promise<Array>}
+ */
+eventSchema.statics.getEventsUntilTimestamp = function (aggregateId, targetTimestamp) {
+  const cutoff = new Date(targetTimestamp);
+  return this.find({
+    aggregateId,
+    timestamp: { $lte: cutoff },
+  })
+    .sort({ timestamp: 1, version: 1 })
+    .lean()
+    .exec();
+};
 
 // ─── Model Export ──────────────────────────────────────────────────────────────
 
 const Event = mongoose.model('Event', eventSchema);
 
 export default Event;
+
