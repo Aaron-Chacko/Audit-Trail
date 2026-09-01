@@ -1,0 +1,63 @@
+.chartContainer {
+  width: 100%;
+  min-height: 280px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.metricLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.metricValue {
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-4) 0;
+}
+
+.neutral {
+  fill: var(--color-neutral);
+}
+
+.info {
+  fill: var(--color-info);
+}
+
+.accent {
+  fill: var(--color-accent);
+}
+
+.success {
+  fill: var(--color-success);
+}
+
+.danger {
+  fill: var(--color-danger);
+}
+
+@media (max-width: 600px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}
