@@ -32,22 +32,48 @@ export const DEPARTED_FROM_PORT    = 'DEPARTED_FROM_PORT';
 export const CUSTOMS_CLEARED       = 'CUSTOMS_CLEARED';
 export const CUSTOMS_HELD          = 'CUSTOMS_HELD';
 
-// ─── Convenience set (useful for validation in Joi/Zod schemas) ────────────────
-export const ALL_EVENT_TYPES = Object.freeze([
+// ─── Grouped Category Arrays ──────────────────────────────────────────────────
+export const SHIPMENT_EVENT_TYPES = Object.freeze([
   SHIPMENT_CREATED,
   SHIPMENT_DEPARTED,
   SHIPMENT_ARRIVED,
   SHIPMENT_CANCELLED,
   SHIPMENT_STATUS_UPDATED,
+]);
+
+export const CONTAINER_EVENT_TYPES = Object.freeze([
   CONTAINER_CREATED,
   CONTAINER_LOADED,
   CONTAINER_UNLOADED,
   LOADED_ON_SHIP,
+]);
+
+export const SENSOR_EVENT_TYPES = Object.freeze([
   TEMPERATURE_SPIKE,
   HUMIDITY_ALERT,
   SENSOR_READING,
+]);
+
+export const PORT_EVENT_TYPES = Object.freeze([
   ARRIVED_AT_PORT,
   DEPARTED_FROM_PORT,
   CUSTOMS_CLEARED,
   CUSTOMS_HELD,
 ]);
+
+// ─── Convenience set (useful for validation in Joi/Zod schemas) ────────────────
+export const ALL_EVENT_TYPES = Object.freeze([
+  ...SHIPMENT_EVENT_TYPES,
+  ...CONTAINER_EVENT_TYPES,
+  ...SENSOR_EVENT_TYPES,
+  ...PORT_EVENT_TYPES,
+]);
+
+/**
+ * Validates whether a given string is a recognised event type.
+ * @param {string} eventType
+ * @returns {boolean}
+ */
+export function isValidEventType(eventType) {
+  return ALL_EVENT_TYPES.includes(eventType);
+}
