@@ -1,33 +1,48 @@
-/**
- * routes/query-routes.js
- *
- * Read-side route definitions ONLY.
- *
- * CQRS rule: this file must NEVER import from services/commands/* or
- * models/Event.js for "current state" reads. All read operations must
- * hit the Read Model (ShipmentReadModel) via query controllers.
- *
- * Exception: query services MAY read from the Event Store for
- * explicit "event history" or "historical state" queries — but only
- * through the query service layer, never directly from a route/controller.
- */
+import express from 'express';
+import { getCurrentState, getEventTimeline, getHistoricalState, listShipments } from '../services/queries/shipment-query-service.js';
+import { sendSuccess, sendError } from '../utils/api-response.js';
 
-import { Router } from 'express';
+const router = express.Router();
 
-// Controllers are added here as they are built in later sprints.
-// e.g.: import * as shipmentQueryController from '../controllers/queries/shipment-query-controller.js';
+router.get('/health', (req, res) => sendSuccess(res, { status: 'query service ok' }));
 
-const router = Router();
+router.get('/shipments', async (req, res) => {
+  try {
+    const shipments = await listShipments();
+    sendSuccess(res, shipments);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
 
-// ── Placeholder — replace with real routes in Week 1 ────────────────────────
-// router.get('/shipments',              shipmentQueryController.list);
-// router.get('/shipments/:id',          shipmentQueryController.getById);
-// router.get('/shipments/:id/events',   shipmentQueryController.getEventHistory);
-// router.get('/shipments/:id/history',  shipmentQueryController.getHistoricalState); // ?asOf=<ISO timestamp>
+router.get('/shipments/:id', async (req, res) => {
+  try {
+    const shipment = await getCurrentState(req.params.id);
+    if (!shipment) return sendError(res, { status: 404, message: 'Shipment not found' });
+    sendSuccess(res, shipment);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
 
-// Health check for the query bus
-router.get('/health', (_req, res) => {
-  res.json({ success: true, data: { side: 'query', status: 'ready' }, error: null });
+router.get('/shipments/:id/history', async (req, res) => {
+  try {
+    const history = await getEventTimeline(req.params.id);
+    sendSuccess(res, history);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.get('/shipments/:id/state-at', async (req, res) => {
+  try {
+    const { timestamp } = req.query;
+    const state = await getHistoricalState(req.params.id, timestamp);
+    if (!state) return sendError(res, { status: 404, message: 'No state found before this timestamp' });
+    sendSuccess(res, state);
+  } catch (err) {
+    sendError(res, err);
+  }
 });
 
 export default router;
