@@ -61,3 +61,5 @@ console.log('    - getAggregateVersion function exists:', typeof getAggregateVer
 console.log('\n====================================================');
 console.log('  ALL EVENT STORE CONTRACTS VERIFIED SUCCESSFULLY!  ');
 console.log('====================================================\n');
+
+process.exit(0);
