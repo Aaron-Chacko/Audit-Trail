@@ -1,4 +1,4 @@
-import { EVENT_TYPES } from '../../events/event-types.js';
+import { CONTAINER_CREATED, LOADED_ON_SHIP, TEMPERATURE_SPIKE, ARRIVED_AT_PORT } from '../../events/event-types.js';
 
 // Pure function — no DB calls. Takes events, returns current state.
 export function reduceShipmentEvents(events) {
@@ -11,7 +11,7 @@ export function reduceShipmentEvents(events) {
 
 function applyEvent(state, event) {
   switch (event.eventType) {
-    case EVENT_TYPES.CONTAINER_CREATED:
+    case CONTAINER_CREATED:
       return {
         aggregateId: event.aggregateId,
         status: 'CREATED',
@@ -22,7 +22,7 @@ function applyEvent(state, event) {
         eventHistory: [{ eventType: event.eventType, timestamp: event.timestamp, version: event.version }],
       };
 
-    case EVENT_TYPES.LOADED_ON_SHIP:
+    case LOADED_ON_SHIP:
       return {
         ...state,
         status: 'LOADED_ON_SHIP',
@@ -30,7 +30,7 @@ function applyEvent(state, event) {
         eventHistory: [...state.eventHistory, { eventType: event.eventType, timestamp: event.timestamp, version: event.version }],
       };
 
-    case EVENT_TYPES.TEMPERATURE_SPIKE:
+    case TEMPERATURE_SPIKE:
       return {
         ...state,
         temperature: event.payload?.temperature,
@@ -39,7 +39,7 @@ function applyEvent(state, event) {
         eventHistory: [...state.eventHistory, { eventType: event.eventType, timestamp: event.timestamp, version: event.version }],
       };
 
-    case EVENT_TYPES.ARRIVED_AT_PORT:
+    case ARRIVED_AT_PORT:
       return {
         ...state,
         status: 'ARRIVED_AT_PORT',
