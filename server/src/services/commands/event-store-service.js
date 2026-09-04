@@ -23,6 +23,13 @@ export async function appendEvent({
     throw new Error('expectedVersion must be a non-negative integer (0 for initial creation).');
   }
 
+  if (metadata.causationId) {
+    const existing = await Event.findByCausationId(aggregateId, metadata.causationId);
+    if (existing) {
+      return { ...existing, isIdempotentReplay: true };
+    }
+  }
+
   const { error: payloadError, value: validatedPayload } = validateEventPayload(eventType, payload);
   if (payloadError) {
     throw new Error(`Event payload validation failed for "${eventType}": ${payloadError.message}`);
@@ -57,6 +64,65 @@ export async function appendEvent({
       throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
     }
     throw err;
+  }
+}
+
+export async function checkConcurrency(aggregateId, expectedVersion) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  const currentVersion = await Event.getMaxVersion(aggregateId);
+  const canAppend = currentVersion === expectedVersion;
+  const drift = currentVersion - expectedVersion;
+
+  return {
+    aggregateId,
+    canAppend,
+    currentVersion,
+    expectedVersion,
+    drift,
+  };
+}
+
+export async function appendWithRetry({
+  aggregateId,
+  eventType,
+  payload = {},
+  getPayload = null,
+  expectedVersion = null,
+  maxRetries = 3,
+  retryDelayMs = 50,
+  metadata = {},
+}) {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      const versionTarget = expectedVersion !== null && attempt === 0
+        ? expectedVersion
+        : await Event.getMaxVersion(aggregateId);
+
+      const finalPayload = typeof getPayload === 'function'
+        ? await getPayload(versionTarget)
+        : payload;
+
+      return await appendEvent({
+        aggregateId,
+        eventType,
+        payload: finalPayload,
+        expectedVersion: versionTarget,
+        metadata,
+      });
+    } catch (err) {
+      if (err instanceof ConcurrencyError && attempt < maxRetries) {
+        attempt += 1;
+        const delay = retryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 20;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
   }
 }
 
