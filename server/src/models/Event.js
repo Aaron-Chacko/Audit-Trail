@@ -53,6 +53,7 @@ eventSchema.index({ aggregateId: 1, version: 1 }, { unique: true });
 eventSchema.index({ aggregateId: 1, timestamp: 1 });
 eventSchema.index({ aggregateId: 1, storedAt: 1 });
 eventSchema.index({ eventType: 1, timestamp: -1 });
+eventSchema.index({ aggregateId: 1, 'metadata.causationId': 1 }, { sparse: true });
 
 const BLOCKED_OPS = [
   'updateOne',
@@ -106,6 +107,11 @@ eventSchema.statics.getEventsUntilTimestamp = function (aggregateId, targetTimes
     .sort({ timestamp: 1, version: 1 })
     .lean()
     .exec();
+};
+
+eventSchema.statics.findByCausationId = function (aggregateId, causationId) {
+  if (!causationId) return null;
+  return this.findOne({ aggregateId, 'metadata.causationId': causationId }).lean().exec();
 };
 
 const Event = mongoose.model('Event', eventSchema);
