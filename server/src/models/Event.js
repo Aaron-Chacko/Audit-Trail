@@ -53,7 +53,19 @@ eventSchema.index({ aggregateId: 1, version: 1 }, { unique: true });
 eventSchema.index({ aggregateId: 1, timestamp: 1 });
 eventSchema.index({ aggregateId: 1, storedAt: 1 });
 eventSchema.index({ eventType: 1, timestamp: -1 });
+eventSchema.index({ aggregateId: 1, eventType: 1, version: 1 });
+eventSchema.index({ timestamp: 1, eventType: 1 });
 eventSchema.index({ aggregateId: 1, 'metadata.causationId': 1 }, { sparse: true });
+eventSchema.index({ 'metadata.correlationId': 1 }, { sparse: true });
+
+eventSchema.pre('save', function (next) {
+  if (!this.isNew) {
+    throw new ImmutabilityViolation(
+      '[EventStore] Modifying an existing event document is forbidden. The event store is strictly append-only.'
+    );
+  }
+  next();
+});
 
 const BLOCKED_OPS = [
   'updateOne',

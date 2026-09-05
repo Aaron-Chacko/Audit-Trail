@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Event from '../../models/Event.js';
 import { isValidEventType } from '../../events/event-types.js';
 import { validateEventPayload } from '../../schemas/event-payload-schemas.js';
@@ -236,5 +237,64 @@ export async function getStreamStats(aggregateId) {
     firstEventAt: events[0].timestamp,
     lastEventAt: events[events.length - 1].timestamp,
     distinctEventTypes,
+  };
+}
+
+export async function verifyStreamIntegrity(aggregateId) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  const events = await Event.findByAggregateId(aggregateId, { sort: 1 });
+  const errors = [];
+
+  if (!events || events.length === 0) {
+    return {
+      isValid: true,
+      aggregateId,
+      eventCount: 0,
+      errors: [],
+    };
+  }
+
+  let expectedVersion = 1;
+  let previousTimestamp = new Date(0);
+
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+
+    if (event.version !== expectedVersion) {
+      errors.push(`Version sequence break at index ${i}: expected ${expectedVersion}, found ${event.version}`);
+    }
+
+    const currentTimestamp = new Date(event.timestamp);
+    if (currentTimestamp < previousTimestamp) {
+      errors.push(`Timestamp non-monotonicity at index ${i}: ${currentTimestamp.toISOString()} before ${previousTimestamp.toISOString()}`);
+    }
+
+    if (!isValidEventType(event.eventType)) {
+      errors.push(`Unrecognized eventType "${event.eventType}" at version ${event.version}`);
+    }
+
+    expectedVersion = event.version + 1;
+    previousTimestamp = currentTimestamp;
+  }
+
+  return {
+    isValid: errors.length === 0,
+    aggregateId,
+    eventCount: events.length,
+    errors,
+  };
+}
+
+export async function getEventStoreHealth() {
+  const isConnected = mongoose.connection.readyState === 1;
+  const count = isConnected ? await Event.countDocuments() : 0;
+  return {
+    status: isConnected ? 'healthy' : 'disconnected',
+    collection: 'events',
+    immutabilityEnforced: true,
+    totalEvents: count,
   };
 }
