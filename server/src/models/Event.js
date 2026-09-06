@@ -126,6 +126,54 @@ eventSchema.statics.findByCausationId = function (aggregateId, causationId) {
   return this.findOne({ aggregateId, 'metadata.causationId': causationId }).lean().exec();
 };
 
+eventSchema.statics.getEventStreamSlice = function (aggregateId, { fromVersion = 1, toVersion, sort = 1, limit } = {}) {
+  const query = { aggregateId, version: { $gte: fromVersion } };
+  if (typeof toVersion === 'number') {
+    query.version.$lte = toVersion;
+  }
+  let cursor = this.find(query).sort({ version: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getEventsInTimeRange = function (aggregateId, { fromTimestamp, toTimestamp, sort = 1, limit } = {}) {
+  const query = { aggregateId, timestamp: {} };
+  if (fromTimestamp) query.timestamp.$gte = new Date(fromTimestamp);
+  if (toTimestamp) query.timestamp.$lte = new Date(toTimestamp);
+  if (Object.keys(query.timestamp).length === 0) delete query.timestamp;
+
+  let cursor = this.find(query).sort({ timestamp: sort, version: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getEventsByTypes = function (aggregateId, eventTypes = [], { sort = 1, limit } = {}) {
+  const query = { aggregateId };
+  if (Array.isArray(eventTypes) && eventTypes.length > 0) {
+    query.eventType = { $in: eventTypes };
+  }
+  let cursor = this.find(query).sort({ version: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getGlobalStream = function ({ sinceStoredAt, limit = 100, eventTypes = [] } = {}) {
+  const query = {};
+  if (sinceStoredAt) {
+    query.storedAt = { $gt: new Date(sinceStoredAt) };
+  }
+  if (Array.isArray(eventTypes) && eventTypes.length > 0) {
+    query.eventType = { $in: eventTypes };
+  }
+  return this.find(query).sort({ storedAt: 1, _id: 1 }).limit(limit).lean().exec();
+};
+
 const Event = mongoose.model('Event', eventSchema);
 
 export default Event;
