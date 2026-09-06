@@ -211,6 +211,31 @@ export async function getAggregateVersion(aggregateId) {
   return Event.getMaxVersion(aggregateId);
 }
 
+export async function getEventStreamSlice(aggregateId, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventStreamSlice(aggregateId, options);
+}
+
+export async function getEventsInTimeRange(aggregateId, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventsInTimeRange(aggregateId, options);
+}
+
+export async function getEventsByTypes(aggregateId, eventTypes, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventsByTypes(aggregateId, eventTypes, options);
+}
+
+export async function getGlobalStream(options = {}) {
+  return Event.getGlobalStream(options);
+}
+
 export async function getStreamStats(aggregateId) {
   if (!aggregateId) {
     throw new Error('aggregateId is required.');
@@ -289,8 +314,8 @@ export async function verifyStreamIntegrity(aggregateId) {
 }
 
 export async function getEventStoreHealth() {
-  const isConnected = mongoose.connection.readyState === 1;
-  const count = isConnected ? await Event.countDocuments() : 0;
+  const isConnected = mongoose.connection && mongoose.connection.readyState === 1;
+  const count = isConnected ? await Event.countDocuments().exec() : 0;
   return {
     status: isConnected ? 'healthy' : 'disconnected',
     collection: 'events',

@@ -1,14 +1,25 @@
 import Event from '../../models/Event.js';
 
-// Fetch all events for one shipment, in order
-export async function getEventsForAggregate(aggregateId) {
-  return Event.find({ aggregateId }).sort({ version: 1 }).lean();
+export async function getEventsForAggregate(aggregateId, options = { sort: 1 }) {
+  return Event.findByAggregateId(aggregateId, options);
 }
 
-// Fetch only events up to a given timestamp (for historical/time-travel queries)
 export async function getEventsUpTo(aggregateId, timestamp) {
-  return Event.find({
-    aggregateId,
-    timestamp: { $lte: new Date(timestamp) },
-  }).sort({ version: 1 }).lean();
+  return Event.getEventsUntilTimestamp(aggregateId, timestamp);
+}
+
+export async function getEventStreamSlice(aggregateId, options = {}) {
+  return Event.getEventStreamSlice(aggregateId, options);
+}
+
+export async function getEventsInTimeRange(aggregateId, options = {}) {
+  return Event.getEventsInTimeRange(aggregateId, options);
+}
+
+export async function getEventsByTypes(aggregateId, eventTypes, options = {}) {
+  return Event.getEventsByTypes(aggregateId, eventTypes, options);
+}
+
+export async function getGlobalStream(options = {}) {
+  return Event.getGlobalStream(options);
 }
