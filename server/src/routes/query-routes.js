@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateHistoricalStateQuery } from '../services/queries/query-validators.js';
 import { getCurrentState, getEventTimeline, getHistoricalState, listShipments } from '../services/queries/shipment-query-service.js';
 import { sendSuccess, sendError } from '../utils/api-response.js';
 
@@ -36,8 +37,15 @@ router.get('/shipments/:id/history', async (req, res) => {
 
 router.get('/shipments/:id/state-at', async (req, res) => {
   try {
+    const { id } = req.params;
     const { timestamp } = req.query;
-    const state = await getHistoricalState(req.params.id, timestamp);
+
+    const { valid, errors } = validateHistoricalStateQuery(id, timestamp);
+    if (!valid) {
+      return sendError(res, { status: 400, message: 'Invalid request', details: errors });
+    }
+
+    const state = await getHistoricalState(id, timestamp);
     if (!state) return sendError(res, { status: 404, message: 'No state found before this timestamp' });
     sendSuccess(res, state);
   } catch (err) {
