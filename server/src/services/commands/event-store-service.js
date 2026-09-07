@@ -3,6 +3,8 @@ import Event from '../../models/Event.js';
 import { isValidEventType } from '../../events/event-types.js';
 import { validateEventPayload } from '../../schemas/event-payload-schemas.js';
 import { ConcurrencyError } from '../../utils/app-errors.js';
+import { sanitizePayload } from '../../utils/payload-sanitizer.js';
+import { buildEventMetadata, createChildMetadata } from '../../utils/metadata-builder.js';
 
 export async function appendEvent({
   aggregateId,
@@ -31,7 +33,8 @@ export async function appendEvent({
     }
   }
 
-  const { error: payloadError, value: validatedPayload } = validateEventPayload(eventType, payload);
+  const cleanPayload = sanitizePayload(payload);
+  const { error: payloadError, value: validatedPayload } = validateEventPayload(eventType, cleanPayload);
   if (payloadError) {
     throw new Error(`Event payload validation failed for "${eventType}": ${payloadError.message}`);
   }
@@ -43,6 +46,7 @@ export async function appendEvent({
   }
 
   const nextVersion = currentVersion + 1;
+  const enrichedMetadata = buildEventMetadata(metadata);
 
   try {
     const event = new Event({
@@ -51,11 +55,7 @@ export async function appendEvent({
       payload: validatedPayload,
       version: nextVersion,
       timestamp: new Date(timestamp),
-      metadata: {
-        causationId: metadata.causationId || null,
-        correlationId: metadata.correlationId || null,
-        triggeredBy: metadata.triggeredBy || null,
-      },
+      metadata: enrichedMetadata,
     });
 
     const savedEvent = await event.save();
@@ -145,11 +145,14 @@ export async function appendEventsBatch({
     throw new Error('expectedVersion must be a non-negative integer.');
   }
 
+  const enrichedMetadata = buildEventMetadata(metadata);
+
   const preparedEvents = events.map((ev, index) => {
     if (!ev.eventType || !isValidEventType(ev.eventType)) {
       throw new Error(`Invalid eventType at index ${index}: "${ev.eventType}".`);
     }
-    const { error, value } = validateEventPayload(ev.eventType, ev.payload || {});
+    const cleanPayload = sanitizePayload(ev.payload || {});
+    const { error, value } = validateEventPayload(ev.eventType, cleanPayload);
     if (error) {
       throw new Error(`Payload validation failed for event at index ${index} (${ev.eventType}): ${error.message}`);
     }
@@ -177,11 +180,7 @@ export async function appendEventsBatch({
         payload: item.payload,
         version: runningVersion,
         timestamp: item.timestamp,
-        metadata: {
-          causationId: metadata.causationId || null,
-          correlationId: metadata.correlationId || null,
-          triggeredBy: metadata.triggeredBy || null,
-        },
+        metadata: enrichedMetadata,
       });
 
       const saved = await eventDoc.save();
@@ -195,6 +194,35 @@ export async function appendEventsBatch({
     }
     throw err;
   }
+}
+
+export async function appendEventWithContext(contextOrReq, eventData, options = {}) {
+  const metadata = buildEventMetadata(contextOrReq, eventData.metadata);
+  if (options.retry) {
+    return appendWithRetry({
+      ...eventData,
+      metadata,
+      ...options,
+    });
+  }
+  return appendEvent({
+    ...eventData,
+    metadata,
+  });
+}
+
+export async function getEventsByCorrelationId(correlationId, options = {}) {
+  if (!correlationId) {
+    throw new Error('correlationId is required.');
+  }
+  return Event.findByCorrelationId(correlationId, options);
+}
+
+export async function getEventsByTriggeredBy(triggeredBy, options = {}) {
+  if (!triggeredBy) {
+    throw new Error('triggeredBy is required.');
+  }
+  return Event.findByTriggeredBy(triggeredBy, options);
 }
 
 export async function getEventsForAggregate(aggregateId, options = { sort: 1 }) {

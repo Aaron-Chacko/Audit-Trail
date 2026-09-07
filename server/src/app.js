@@ -20,6 +20,7 @@ import { env } from './config/env.js';
 import commandRoutes from './routes/command-routes.js';
 import queryRoutes from './routes/query-routes.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { correlationMiddleware } from './middleware/correlation.js';
 
 const app = express();
 
@@ -36,7 +37,10 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// ── 3. Request logging (dev only) ─────────────────────────────────────────────
+// ── 3. Distributed Tracing & Audit Context ───────────────────────────────────
+app.use(correlationMiddleware);
+
+// ── 4. Request logging (dev only) ─────────────────────────────────────────────
 if (env.nodeEnv === 'development') {
   app.use((req, _res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
