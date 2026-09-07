@@ -40,6 +40,10 @@ const eventSchema = new Schema(
       causationId: { type: String, default: null },
       correlationId: { type: String, default: null },
       triggeredBy: { type: String, default: null },
+      clientIp: { type: String, default: null },
+      userAgent: { type: String, default: null },
+      originTimestamp: { type: Date, default: null },
+      schemaVersion: { type: Number, default: 1 },
     },
   },
   {
@@ -57,6 +61,7 @@ eventSchema.index({ aggregateId: 1, eventType: 1, version: 1 });
 eventSchema.index({ timestamp: 1, eventType: 1 });
 eventSchema.index({ aggregateId: 1, 'metadata.causationId': 1 }, { sparse: true });
 eventSchema.index({ 'metadata.correlationId': 1 }, { sparse: true });
+eventSchema.index({ 'metadata.triggeredBy': 1 }, { sparse: true });
 
 eventSchema.pre('save', function (next) {
   if (!this.isNew) {
@@ -172,6 +177,24 @@ eventSchema.statics.getGlobalStream = function ({ sinceStoredAt, limit = 100, ev
     query.eventType = { $in: eventTypes };
   }
   return this.find(query).sort({ storedAt: 1, _id: 1 }).limit(limit).lean().exec();
+};
+
+eventSchema.statics.findByCorrelationId = function (correlationId, { sort = 1, limit } = {}) {
+  if (!correlationId) return Promise.resolve([]);
+  let cursor = this.find({ 'metadata.correlationId': correlationId }).sort({ storedAt: sort, _id: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.findByTriggeredBy = function (triggeredBy, { sort = -1, limit = 50 } = {}) {
+  if (!triggeredBy) return Promise.resolve([]);
+  let cursor = this.find({ 'metadata.triggeredBy': triggeredBy }).sort({ storedAt: sort, _id: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
 };
 
 const Event = mongoose.model('Event', eventSchema);

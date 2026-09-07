@@ -23,3 +23,11 @@ export async function getEventsByTypes(aggregateId, eventTypes, options = {}) {
 export async function getGlobalStream(options = {}) {
   return Event.getGlobalStream(options);
 }
+
+export async function getEventsByCorrelationId(correlationId, options = {}) {
+  return Event.findByCorrelationId(correlationId, options);
+}
+
+export async function getEventsByTriggeredBy(triggeredBy, options = {}) {
+  return Event.findByTriggeredBy(triggeredBy, options);
+}
