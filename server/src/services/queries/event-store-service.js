@@ -1,4 +1,12 @@
 import Event from '../../models/Event.js';
+import Snapshot from '../../models/Snapshot.js';
+import {
+  getLatestSnapshot,
+  getSnapshotAtVersion,
+  getSnapshotAtTimestamp,
+  getAcceleratedStream,
+  verifySnapshotIntegrity,
+} from '../commands/snapshot-service.js';
 
 export async function getEventsForAggregate(aggregateId, options = { sort: 1 }) {
   return Event.findByAggregateId(aggregateId, options);
@@ -30,4 +38,13 @@ export async function getEventsByCorrelationId(correlationId, options = {}) {
 
 export async function getEventsByTriggeredBy(triggeredBy, options = {}) {
   return Event.findByTriggeredBy(triggeredBy, options);
-}
+}
+
+export {
+  getLatestSnapshot,
+  getSnapshotAtVersion,
+  getSnapshotAtTimestamp,
+  getAcceleratedStream,
+  verifySnapshotIntegrity,
+};
+
