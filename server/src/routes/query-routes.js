@@ -1,4 +1,5 @@
 import express from 'express';
+import { formatShipmentResponse, formatShipmentList } from '../services/queries/shipment-formatter.js';
 import { validateHistoricalStateQuery } from '../services/queries/query-validators.js';
 import { getCurrentState, getEventTimeline, getHistoricalState, listShipments } from '../services/queries/shipment-query-service.js';
 import { sendSuccess, sendError } from '../utils/api-response.js';
@@ -10,7 +11,7 @@ router.get('/health', (req, res) => sendSuccess(res, { status: 'query service ok
 router.get('/shipments', async (req, res) => {
   try {
     const shipments = await listShipments();
-    sendSuccess(res, shipments);
+    sendSuccess(res, formatShipmentList(shipments));
   } catch (err) {
     sendError(res, err);
   }
@@ -20,7 +21,7 @@ router.get('/shipments/:id', async (req, res) => {
   try {
     const shipment = await getCurrentState(req.params.id);
     if (!shipment) return sendError(res, { status: 404, message: 'Shipment not found' });
-    sendSuccess(res, shipment);
+    sendSuccess(res, formatShipmentResponse(shipment));
   } catch (err) {
     sendError(res, err);
   }
