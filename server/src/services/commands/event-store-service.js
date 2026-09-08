@@ -351,3 +351,14 @@ export async function getEventStoreHealth() {
     totalEvents: count,
   };
 }
+
+export {
+  saveSnapshot,
+  shouldTakeSnapshot,
+  getLatestSnapshot,
+  getSnapshotAtVersion,
+  getSnapshotAtTimestamp,
+  getAcceleratedStream,
+  verifySnapshotIntegrity,
+} from './snapshot-service.js';
+
