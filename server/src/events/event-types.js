@@ -72,6 +72,7 @@ export const EVENT_TYPES = Object.freeze({
   CUSTOMS_HELD,
 });
 
+
 export function isValidEventType(eventType) {
   return ALL_EVENT_TYPES.includes(eventType);
 }
