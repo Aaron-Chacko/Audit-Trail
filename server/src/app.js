@@ -62,6 +62,22 @@ app.use('/api/commands', commandRoutes);
 app.use('/api/queries', queryRoutes);
 
 // Top-level health check (for load balancers / Docker health checks)
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      name: 'Audit Trail API',
+      status: 'online',
+      endpoints: {
+        health: '/health',
+        commands: '/api/commands',
+        queries: '/api/queries',
+      },
+    },
+    error: null,
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok' }, error: null });
 });
