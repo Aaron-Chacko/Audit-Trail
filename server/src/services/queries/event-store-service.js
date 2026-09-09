@@ -40,6 +40,12 @@ export async function getEventsByTriggeredBy(triggeredBy, options = {}) {
   return Event.findByTriggeredBy(triggeredBy, options);
 }
 
+import { eventStoreMetrics } from '../../utils/event-store-metrics.js';
+
+export function getEventStoreMetrics() {
+  return eventStoreMetrics.getSummary();
+}
+
 export {
   getLatestSnapshot,
   getSnapshotAtVersion,
@@ -47,4 +53,5 @@ export {
   getAcceleratedStream,
   verifySnapshotIntegrity,
 };
+
 
