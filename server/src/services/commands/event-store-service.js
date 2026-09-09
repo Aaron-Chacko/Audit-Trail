@@ -5,6 +5,7 @@ import { validateEventPayload } from '../../schemas/event-payload-schemas.js';
 import { ConcurrencyError } from '../../utils/app-errors.js';
 import { sanitizePayload } from '../../utils/payload-sanitizer.js';
 import { buildEventMetadata, createChildMetadata } from '../../utils/metadata-builder.js';
+import { eventStoreMetrics } from '../../utils/event-store-metrics.js';
 
 export async function appendEvent({
   aggregateId,
@@ -14,6 +15,8 @@ export async function appendEvent({
   timestamp = new Date(),
   metadata = {},
 }) {
+  const startTime = Date.now();
+
   if (!aggregateId) {
     throw new Error('aggregateId is required to append an event.');
   }
@@ -42,6 +45,7 @@ export async function appendEvent({
   const currentVersion = await Event.getMaxVersion(aggregateId);
 
   if (currentVersion !== expectedVersion) {
+    eventStoreMetrics.recordConflict();
     throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
   }
 
@@ -59,9 +63,19 @@ export async function appendEvent({
     });
 
     const savedEvent = await event.save();
-    return savedEvent.toObject ? savedEvent.toObject() : savedEvent;
+    const result = savedEvent.toObject ? savedEvent.toObject() : savedEvent;
+
+    const payloadSize = JSON.stringify(validatedPayload || {}).length;
+    eventStoreMetrics.recordAppend({
+      eventType,
+      payloadSize,
+      latencyMs: Date.now() - startTime,
+    });
+
+    return result;
   } catch (err) {
     if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
+      eventStoreMetrics.recordConflict();
       throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
     }
     throw err;
@@ -352,6 +366,15 @@ export async function getEventStoreHealth() {
   };
 }
 
+export function getEventStoreMetrics() {
+  return eventStoreMetrics.getSummary();
+}
+
+export function resetEventStoreMetrics() {
+  eventStoreMetrics.reset();
+  return { reset: true };
+}
+
 export {
   saveSnapshot,
   shouldTakeSnapshot,
@@ -361,4 +384,5 @@ export {
   getAcceleratedStream,
   verifySnapshotIntegrity,
 } from './snapshot-service.js';
+
 
