@@ -1,4 +1,6 @@
 import express from 'express';
+import { sortShipments, paginate } from '../services/queries/query-helpers.js';
+import { summarizeShipments } from '../services/queries/shipment-summary.js';
 import { formatShipmentResponse, formatShipmentList } from '../services/queries/shipment-formatter.js';
 import { validateHistoricalStateQuery } from '../services/queries/query-validators.js';
 import { getCurrentState, getEventTimeline, getHistoricalState, listShipments } from '../services/queries/shipment-query-service.js';
@@ -29,8 +31,25 @@ router.get('/health', (req, res) => sendSuccess(res, { status: 'query service ok
 
 router.get('/shipments', async (req, res) => {
   try {
+    const { sortBy = 'lastEventVersion', order = 'desc', page = 1, limit = 20 } = req.query;
+
     const shipments = await listShipments();
-    sendSuccess(res, formatShipmentList(shipments));
+    const formatted = formatShipmentList(shipments);
+    const sorted = sortShipments(formatted, sortBy, order);
+    const paginated = paginate(sorted, Number(page), Number(limit));
+
+    sendSuccess(res, paginated);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.get('/shipments/summary', async (req, res) => {
+  try {
+    const shipments = await listShipments();
+    const formatted = formatShipmentList(shipments);
+    const summary = summarizeShipments(formatted);
+    sendSuccess(res, summary);
   } catch (err) {
     sendError(res, err);
   }
