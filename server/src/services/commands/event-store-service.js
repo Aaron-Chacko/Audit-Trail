@@ -358,11 +358,20 @@ export async function verifyStreamIntegrity(aggregateId) {
 export async function getEventStoreHealth() {
   const isConnected = mongoose.connection && mongoose.connection.readyState === 1;
   const count = isConnected ? await Event.countDocuments().exec() : 0;
+  const mem = process.memoryUsage();
+
   return {
     status: isConnected ? 'healthy' : 'disconnected',
     collection: 'events',
     immutabilityEnforced: true,
     totalEvents: count,
+    memoryUsageMB: {
+      rss: Number((mem.rss / (1024 * 1024)).toFixed(2)),
+      heapUsed: Number((mem.heapUsed / (1024 * 1024)).toFixed(2)),
+      heapTotal: Number((mem.heapTotal / (1024 * 1024)).toFixed(2)),
+    },
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date(),
   };
 }
 

@@ -132,26 +132,40 @@ eventSchema.statics.findByCausationId = function (aggregateId, causationId) {
 };
 
 eventSchema.statics.getEventStreamSlice = function (aggregateId, { fromVersion = 1, toVersion, sort = 1, limit } = {}) {
-  const query = { aggregateId, version: { $gte: fromVersion } };
-  if (typeof toVersion === 'number') {
-    query.version.$lte = toVersion;
+  const safeFromVersion = Math.max(1, parseInt(fromVersion, 10) || 1);
+  const safeSort = sort === -1 ? -1 : 1;
+  const query = { aggregateId, version: { $gte: safeFromVersion } };
+
+  if (typeof toVersion === 'number' && !isNaN(toVersion)) {
+    query.version.$lte = Math.max(safeFromVersion, parseInt(toVersion, 10));
   }
-  let cursor = this.find(query).sort({ version: sort });
+
+  let cursor = this.find(query).sort({ version: safeSort });
   if (typeof limit === 'number' && limit > 0) {
-    cursor = cursor.limit(limit);
+    const safeLimit = Math.min(1000, parseInt(limit, 10) || 100);
+    cursor = cursor.limit(safeLimit);
   }
   return cursor.lean().exec();
 };
 
 eventSchema.statics.getEventsInTimeRange = function (aggregateId, { fromTimestamp, toTimestamp, sort = 1, limit } = {}) {
+  const safeSort = sort === -1 ? -1 : 1;
   const query = { aggregateId, timestamp: {} };
-  if (fromTimestamp) query.timestamp.$gte = new Date(fromTimestamp);
-  if (toTimestamp) query.timestamp.$lte = new Date(toTimestamp);
-  if (Object.keys(query.timestamp).length === 0) delete query.timestamp;
 
-  let cursor = this.find(query).sort({ timestamp: sort, version: sort });
+  if (fromTimestamp && !isNaN(new Date(fromTimestamp).getTime())) {
+    query.timestamp.$gte = new Date(fromTimestamp);
+  }
+  if (toTimestamp && !isNaN(new Date(toTimestamp).getTime())) {
+    query.timestamp.$lte = new Date(toTimestamp);
+  }
+  if (Object.keys(query.timestamp).length === 0) {
+    delete query.timestamp;
+  }
+
+  let cursor = this.find(query).sort({ timestamp: safeSort, version: safeSort });
   if (typeof limit === 'number' && limit > 0) {
-    cursor = cursor.limit(limit);
+    const safeLimit = Math.min(1000, parseInt(limit, 10) || 100);
+    cursor = cursor.limit(safeLimit);
   }
   return cursor.lean().exec();
 };
