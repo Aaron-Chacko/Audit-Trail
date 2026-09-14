@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useShipment } from '@/hooks/useShipment.js';
 import { useEventHistory } from '@/hooks/useEventHistory.js';
-import { TimelineHeader, TimelineStream } from '@/components/timeline/index.js';
+import { TimelineHeader, TimelineStream, EventInspectorModal } from '@/components/timeline/index.js';
 import styles from './Timeline.module.css';
 
 /**
  * pages/Timeline.jsx
  *
- * Chronological Event Timeline & Historical Scrubber Page (Phase 1).
+ * Chronological Event Timeline & Historical Scrubber Page (Phase 1 & Phase 2).
  * Displays the immutable event stream for a selected shipment with
- * order controls, metadata overview, and interactive cards.
+ * rich category badges, sort controls, and deep ledger inspection modal.
  */
 export default function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +19,7 @@ export default function Timeline() {
   const [selectedId, setSelectedId] = useState(initialId);
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' (oldest first) | 'desc' (newest first)
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [inspectingEvent, setInspectingEvent] = useState(null);
 
   // Read Model Current State
   const { shipment, isLoading: isShipmentLoading, refetch: refetchShipment } = useShipment(selectedId);
@@ -50,8 +51,11 @@ export default function Timeline() {
   };
 
   const handleInspectEvent = (event) => {
-    // Inspector modal hook point (will be wired in Phase 2)
-    console.log('[Timeline] Inspecting event:', event);
+    setInspectingEvent(event);
+  };
+
+  const handleCloseModal = () => {
+    setInspectingEvent(null);
   };
 
   const isLoading = isShipmentLoading || isEventsLoading;
@@ -107,6 +111,14 @@ export default function Timeline() {
           />
         </div>
       </div>
+
+      {/* Deep-Dive Event Inspector Modal (Phase 2) */}
+      {inspectingEvent && (
+        <EventInspectorModal
+          event={inspectingEvent}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }

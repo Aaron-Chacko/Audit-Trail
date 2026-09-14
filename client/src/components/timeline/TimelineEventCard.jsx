@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { ALERT_EVENT_TYPES } from '@/constants/event-types.js';
-import { formatEventType, formatTemperature, formatHumidity } from '@/utils/formatters.js';
+import EventBadge from '@/components/common/EventBadge.jsx';
+import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
+import { isAlertEvent } from '@/utils/event-theme.js';
 import styles from './TimelineEventCard.module.css';
 
 /**
  * TimelineEventCard
- * Renders an individual event node in the chronological stream.
+ * Renders an individual event node in the chronological stream with rich badges & inspection.
  *
  * @param {object} props
  * @param {object} props.event - The event object from Event Store
@@ -27,8 +28,7 @@ export default function TimelineEventCard({
 
   if (!event) return null;
 
-  const isAlert = ALERT_EVENT_TYPES.includes(event.eventType);
-  const eventLabel = formatEventType(event.eventType);
+  const isAlert = isAlertEvent(event.eventType);
   const relativeTime = formatRelativeTime(event.timestamp);
   const absoluteTime = formatEventTimestamp(event.timestamp);
 
@@ -41,7 +41,6 @@ export default function TimelineEventCard({
     }
   };
 
-  // Helper to extract key summary highlights for quick badge rendering
   const renderSummaryBadges = () => {
     const payload = event.payload || {};
     const badges = [];
@@ -79,6 +78,13 @@ export default function TimelineEventCard({
       badges.push({
         key: 'cargo',
         label: `📦 ${payload.cargo?.description || payload.cargoDescription}`,
+      });
+    }
+
+    if (payload.cargo?.weightKg != null) {
+      badges.push({
+        key: 'weight',
+        label: `⚖️ ${formatWeight(payload.cargo.weightKg)}`,
       });
     }
 
@@ -124,7 +130,7 @@ export default function TimelineEventCard({
         <div className={styles.cardHeader}>
           <div className={styles.titleGroup}>
             <span className={styles.versionTag}>v{event.version}</span>
-            <h4 className={styles.eventTitle}>{eventLabel}</h4>
+            <EventBadge eventType={event.eventType} size="md" pulse={isAlert} />
             {isFirst && <span className={styles.tagGenesis}>Genesis</span>}
             {isLast && <span className={styles.tagLatest}>Latest</span>}
           </div>
@@ -158,7 +164,7 @@ export default function TimelineEventCard({
             aria-expanded={isPayloadExpanded}
           >
             <span className={styles.chevron}>{isPayloadExpanded ? '▾' : '▸'}</span>
-            {isPayloadExpanded ? 'Hide Payload' : 'View Payload Preview'}
+            {isPayloadExpanded ? 'Hide Payload' : 'Preview Payload'}
           </button>
 
           <div className={styles.footerActions}>
@@ -176,8 +182,9 @@ export default function TimelineEventCard({
                 type="button"
                 className={styles.inspectBtn}
                 onClick={() => onInspect(event)}
+                title="Open detailed event inspector modal"
               >
-                Inspect
+                🔍 Inspect Event
               </button>
             )}
           </div>
