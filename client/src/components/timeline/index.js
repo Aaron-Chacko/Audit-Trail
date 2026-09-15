@@ -9,3 +9,5 @@ export { default as TimelineHeader } from './TimelineHeader.jsx';
 export { default as TimelineSkeleton } from './TimelineSkeleton.jsx';
 export { default as TimelineEmptyState } from './TimelineEmptyState.jsx';
 export { default as EventInspectorModal } from './EventInspectorModal.jsx';
+export { default as TimelineFilterToolbar } from './TimelineFilterToolbar.jsx';
+export { default as TimelineAnalyticsSummary } from './TimelineAnalyticsSummary.jsx';
