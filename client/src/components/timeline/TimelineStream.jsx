@@ -8,33 +8,41 @@ import styles from './TimelineStream.module.css';
 /**
  * TimelineStream
  * Renders the chronological event ledger stream with state indicators,
- * connecting tracks, and sorting.
+ * connecting tracks, sorting, and filter status.
  *
  * @param {object} props
  * @param {Array} props.events - Raw event objects from backend Event Store
+ * @param {Array} [props.filteredEvents] - Events matching active search/filter
  * @param {boolean} props.isLoading - Whether event history is loading
  * @param {Error|null} props.error - API error if any
  * @param {'asc'|'desc'} [props.sortOrder='asc'] - 'asc' (oldest first) | 'desc' (newest first)
+ * @param {'detailed'|'compact'} [props.viewDensity='detailed'] - Density layout mode
  * @param {Function} [props.onInspect] - Handler when an event card inspect is clicked
  * @param {Function} [props.onRetry] - Handler for retry action on error
+ * @param {Function} [props.onResetFilters] - Handler to reset active filters
  */
 export default function TimelineStream({
   events = [],
+  filteredEvents = null,
   isLoading = false,
   error = null,
   sortOrder = 'asc',
+  viewDensity = 'detailed',
   onInspect,
   onRetry,
+  onResetFilters,
 }) {
+  const activeEventsList = filteredEvents !== null ? filteredEvents : events;
+
   const sortedEvents = useMemo(() => {
-    if (!events || events.length === 0) return [];
-    const cloned = [...events];
+    if (!activeEventsList || activeEventsList.length === 0) return [];
+    const cloned = [...activeEventsList];
     return cloned.sort((a, b) => {
       const vA = a.version ?? 0;
       const vB = b.version ?? 0;
       return sortOrder === 'asc' ? vA - vB : vB - vA;
     });
-  }, [events, sortOrder]);
+  }, [activeEventsList, sortOrder]);
 
   if (isLoading && (!events || events.length === 0)) {
     return <TimelineSkeleton count={4} />;
@@ -53,6 +61,7 @@ export default function TimelineStream({
     );
   }
 
+  // Case 1: Entire stream is empty
   if (!events || events.length === 0) {
     return (
       <TimelineEmptyState
@@ -62,18 +71,30 @@ export default function TimelineStream({
     );
   }
 
+  // Case 2: Filter resulted in 0 matches
+  if (sortedEvents.length === 0 && events.length > 0) {
+    return (
+      <TimelineEmptyState
+        title="No Matching Events"
+        description="No events match your active search query or category filters."
+        actionLabel="Reset Filters"
+        onAction={onResetFilters}
+      />
+    );
+  }
+
   const genesisVersion = Math.min(...events.map((e) => e.version ?? 1));
   const latestVersion = Math.max(...events.map((e) => e.version ?? 1));
 
   return (
-    <div className={styles.streamContainer}>
-      {/* Stream Head Banner */}
+    <div className={`${styles.streamContainer} ${viewDensity === 'compact' ? styles.compactMode : ''}`}>
+      {/* Stream Head Boundary Indicator */}
       <div className={styles.streamBoundary}>
         <div className={styles.boundaryDot} />
         <span className={styles.boundaryText}>
           {sortOrder === 'asc'
-            ? `Genesis Origin (Version ${genesisVersion})`
-            : `Head of Stream (Latest Version ${latestVersion})`}
+            ? `Genesis Origin (v${genesisVersion})`
+            : `Head of Stream (Latest v${latestVersion})`}
         </span>
       </div>
 
@@ -96,13 +117,13 @@ export default function TimelineStream({
         })}
       </div>
 
-      {/* Stream End Banner */}
+      {/* Stream End Boundary Indicator */}
       <div className={styles.streamBoundary}>
         <div className={`${styles.boundaryDot} ${styles.boundaryDotEnd}`} />
         <span className={styles.boundaryText}>
           {sortOrder === 'asc'
-            ? `Head of Stream (Latest Version ${latestVersion}) — Immutable Ledger Closed`
-            : `Genesis Origin (Version ${genesisVersion}) — Stream Initiated`}
+            ? `Head of Stream (Latest v${latestVersion}) — Ledger Intact`
+            : `Genesis Origin (v${genesisVersion}) — Initial Event Record`}
         </span>
       </div>
     </div>

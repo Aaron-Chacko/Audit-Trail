@@ -5,6 +5,11 @@
   padding: var(--space-2) 0;
 }
 
+.compactMode :global(.TimelineEventCard_card__2Z) {
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
 .streamBoundary {
   display: flex;
   align-items: center;
