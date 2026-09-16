@@ -17,6 +17,7 @@ import styles from './TimelineStream.module.css';
  * @param {Error|null} props.error - API error if any
  * @param {'asc'|'desc'} [props.sortOrder='asc'] - 'asc' (oldest first) | 'desc' (newest first)
  * @param {'detailed'|'compact'} [props.viewDensity='detailed'] - Density layout mode
+ * @param {number} [props.selectedVersion] - Currently active/scrubbed version
  * @param {Function} [props.onInspect] - Handler when an event card inspect is clicked
  * @param {Function} [props.onRetry] - Handler for retry action on error
  * @param {Function} [props.onResetFilters] - Handler to reset active filters
@@ -28,6 +29,7 @@ export default function TimelineStream({
   error = null,
   sortOrder = 'asc',
   viewDensity = 'detailed',
+  selectedVersion = null,
   onInspect,
   onRetry,
   onResetFilters,
@@ -104,6 +106,7 @@ export default function TimelineStream({
           const isFirstInStream = event.version === genesisVersion;
           const isLastInStream = event.version === latestVersion;
           const isLastInRender = index === sortedEvents.length - 1;
+          const isSelected = selectedVersion != null && event.version === selectedVersion;
 
           return (
             <TimelineEventCard
@@ -111,6 +114,7 @@ export default function TimelineStream({
               event={event}
               isFirst={isFirstInStream}
               isLast={isLastInRender}
+              isSelected={isSelected}
               onInspect={onInspect}
             />
           );
