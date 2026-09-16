@@ -11,3 +11,5 @@ export { default as TimelineEmptyState } from './TimelineEmptyState.jsx';
 export { default as EventInspectorModal } from './EventInspectorModal.jsx';
 export { default as TimelineFilterToolbar } from './TimelineFilterToolbar.jsx';
 export { default as TimelineAnalyticsSummary } from './TimelineAnalyticsSummary.jsx';
+export { default as TimelineStateScrubber } from './TimelineStateScrubber.jsx';
+export { default as ReconstructedStateCard } from './ReconstructedStateCard.jsx';

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useShipment } from '@/hooks/useShipment.js';
 import { useEventHistory } from '@/hooks/useEventHistory.js';
@@ -6,11 +6,14 @@ import {
   TimelineHeader,
   TimelineAnalyticsSummary,
   TimelineFilterToolbar,
+  TimelineStateScrubber,
+  ReconstructedStateCard,
   TimelineStream,
   EventInspectorModal,
 } from '@/components/timeline/index.js';
 import { getEventCategory, isAlertEvent } from '@/utils/event-theme.js';
 import { formatEventType } from '@/utils/formatters.js';
+import { reconstructStateAtVersion } from '@/utils/shipment-state-reconstructor.js';
 import styles from './Timeline.module.css';
 
 /**
@@ -21,6 +24,7 @@ import styles from './Timeline.module.css';
  *  - Full Event Stream visualization (Phase 1)
  *  - Rich Category Badges & Inspector Modal (Phase 2)
  *  - Real-Time Search, Category Filtering, Alerts Toggle, and Stream Analytics (Phase 3)
+ *  - Interactive State Scrubber, Point-In-Time Reconstructed State, & Time-Travel Player (Phase 4)
  */
 export default function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,6 +41,12 @@ export default function Timeline() {
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [viewDensity, setViewDensity] = useState('detailed'); // 'detailed' | 'compact'
 
+  // Time-Travel Scrubber States (Phase 4)
+  const [scrubberVersion, setScrubberVersion] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const timerRef = useRef(null);
+
   // Read Model Current State
   const { shipment, isLoading: isShipmentLoading, refetch: refetchShipment } = useShipment(selectedId);
 
@@ -48,10 +58,66 @@ export default function Timeline() {
     refetch: refetchHistory,
   } = useEventHistory(selectedId);
 
+  // Calculate max version in stream
+  const maxVersion = useMemo(() => {
+    if (!events || events.length === 0) return 1;
+    return Math.max(...events.map((e) => e.version ?? 1));
+  }, [events]);
+
+  // Synchronize initial scrubber position to the latest head version
+  useEffect(() => {
+    if (events && events.length > 0) {
+      setScrubberVersion((prev) => {
+        if (prev === null || prev > maxVersion) {
+          return maxVersion;
+        }
+        return prev;
+      });
+    }
+  }, [events, maxVersion]);
+
+  // Point-in-time state reconstruction for the active scrubber version
+  const activeVersion = scrubberVersion !== null ? scrubberVersion : maxVersion;
+  const reconstructedState = useMemo(() => {
+    if (!events || events.length === 0) return shipment;
+    return reconstructStateAtVersion(events, activeVersion);
+  }, [events, activeVersion, shipment]);
+
+  // Automated Replay Player Simulation Engine
+  useEffect(() => {
+    if (isPlaying) {
+      const intervalMs = Math.max(300, Math.round(1500 / playbackSpeed));
+      timerRef.current = setInterval(() => {
+        setScrubberVersion((current) => {
+          const next = (current || 1) + 1;
+          if (next >= maxVersion) {
+            setIsPlaying(false);
+            return maxVersion;
+          }
+          return next;
+        });
+      }, intervalMs);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isPlaying, playbackSpeed, maxVersion]);
+
   const handleSelectShipment = (id) => {
     setSelectedId(id);
     setSearchParams({ id });
     handleResetFilters();
+    setScrubberVersion(null);
+    setIsPlaying(false);
   };
 
   const handleToggleSort = () => {
@@ -92,6 +158,20 @@ export default function Timeline() {
     setViewDensity((prev) => (prev === 'detailed' ? 'compact' : 'detailed'));
   };
 
+  const handleTogglePlay = () => {
+    if (activeVersion >= maxVersion) {
+      setScrubberVersion(1);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying((prev) => !prev);
+    }
+  };
+
+  const handleResetToHead = () => {
+    setScrubberVersion(maxVersion);
+    setIsPlaying(false);
+  };
+
   const handleJumpToGenesis = () => {
     const genesisNode = document.getElementById('event-node-v1');
     if (genesisNode) {
@@ -101,8 +181,7 @@ export default function Timeline() {
 
   const handleJumpToHead = () => {
     if (!events || events.length === 0) return;
-    const maxV = Math.max(...events.map((e) => e.version ?? 1));
-    const headNode = document.getElementById(`event-node-v${maxV}`);
+    const headNode = document.getElementById(`event-node-v${maxVersion}`);
     if (headNode) {
       headNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -157,7 +236,7 @@ export default function Timeline() {
       <div className={styles.headerSection}>
         <h1 className={styles.pageTitle}>Chronological Event Timeline</h1>
         <p className={styles.pageSubtitle}>
-          Audit Trail immutable event ledger. Inspect state transitions, event versions, and chronological lifecycle milestones.
+          Audit Trail immutable event ledger. Reconstruct historical aggregate states, scrub through version history, and replay state transitions.
         </p>
       </div>
 
@@ -174,13 +253,40 @@ export default function Timeline() {
         onToggleSort={handleToggleSort}
       />
 
-      {/* Stream Analytics Bar (Phase 3) */}
+      {/* Stream Analytics Bar */}
       <TimelineAnalyticsSummary
         events={events}
         filteredEvents={filteredEvents}
         onJumpToGenesis={handleJumpToGenesis}
         onJumpToHead={handleJumpToHead}
       />
+
+      {/* State Scrubber & Time-Travel Player Dock (Phase 4) */}
+      {events && events.length > 0 && (
+        <TimelineStateScrubber
+          currentVersion={activeVersion}
+          maxVersion={maxVersion}
+          onChangeVersion={(v) => {
+            setScrubberVersion(v);
+            setIsPlaying(false);
+          }}
+          isPlaying={isPlaying}
+          onTogglePlay={handleTogglePlay}
+          playbackSpeed={playbackSpeed}
+          onChangeSpeed={setPlaybackSpeed}
+          events={events}
+        />
+      )}
+
+      {/* Point-in-time Reconstructed State Snapshot Card (Phase 4) */}
+      {reconstructedState && (
+        <ReconstructedStateCard
+          state={reconstructedState}
+          maxVersion={maxVersion}
+          isHead={activeVersion === maxVersion}
+          onResetToHead={handleResetToHead}
+        />
+      )}
 
       {/* Main Timeline Stream Layout */}
       <div className={styles.mainLayout}>
@@ -200,7 +306,7 @@ export default function Timeline() {
             </div>
           </div>
 
-          {/* Interactive Filter & Search Toolbar (Phase 3) */}
+          {/* Interactive Filter & Search Toolbar */}
           {events && events.length > 0 && (
             <TimelineFilterToolbar
               events={events}
@@ -219,7 +325,7 @@ export default function Timeline() {
             />
           )}
 
-          {/* Chronological Stream Track */}
+          {/* Chronological Stream Track with Active Scrubber Highlight */}
           <TimelineStream
             events={events}
             filteredEvents={filteredEvents}
@@ -227,6 +333,7 @@ export default function Timeline() {
             error={eventsError}
             sortOrder={sortOrder}
             viewDensity={viewDensity}
+            selectedVersion={activeVersion}
             onInspect={handleInspectEvent}
             onRetry={handleRefresh}
             onResetFilters={handleResetFilters}
