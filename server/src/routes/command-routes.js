@@ -30,6 +30,18 @@ const router = Router();
 // router.post('/shipments/:id/temperature', validate(recordTemperatureSchema), shipmentCommandController.recordTemperature);
 
 // Health check for the command bus (useful during local development)
+router.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      side: 'command',
+      status: 'ready',
+      description: 'Write-side command endpoints',
+    },
+    error: null,
+  });
+});
+
 router.get('/health', (_req, res) => {
   res.json({ success: true, data: { side: 'command', status: 'ready' }, error: null });
 });

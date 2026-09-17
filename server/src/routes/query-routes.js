@@ -8,7 +8,26 @@ import { sendSuccess, sendError } from '../utils/api-response.js';
 
 const router = express.Router();
 
-router.get('/health', (_req, res) => sendSuccess(res, { status: 'query service ok' }));
+router.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      side: 'query',
+      status: 'ready',
+      description: 'Read-side query endpoints',
+      endpoints: {
+        health: '/api/queries/health',
+        shipments: '/api/queries/shipments',
+        shipmentById: '/api/queries/shipments/:id',
+        history: '/api/queries/shipments/:id/history',
+        stateAt: '/api/queries/shipments/:id/state-at?timestamp=',
+      },
+    },
+    error: null,
+  });
+});
+
+router.get('/health', (req, res) => sendSuccess(res, { status: 'query service ok' }));
 
 router.get('/shipments', async (req, res) => {
   try {

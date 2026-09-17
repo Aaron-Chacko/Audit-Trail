@@ -1,52 +1,17 @@
-/**
- * models/Event.js  — The Event Store schema
- *
- * DESIGN RULES (enforced here so all contributors stay honest):
- *
- *  1. APPEND-ONLY: pre('updateOne'), pre('updateMany'), pre('findOneAndUpdate'),
- *     pre('deleteOne'), pre('deleteMany'), and pre('findOneAndDelete') all throw.
- *     If you see a ConcurrencyError instead, your version check failed upstream.
- *
- *  2. OPTIMISTIC CONCURRENCY: the compound unique index on
- *     { aggregateId, version } guarantees that two simultaneous commands for
- *     the same aggregate cannot both persist — one will receive a duplicate-key
- *     error (E11000). The command layer must catch this and surface a 409.
- *
- *  3. VERSION starts at 1 for the first event on an aggregate and increments
- *     monotonically. The command layer is responsible for reading the current
- *     max version and incrementing before appending.
- *
- *  4. PAYLOAD is intentionally untyped (Mixed) at the Mongoose level because
- *     each eventType has its own structure. Validation happens upstream in the
- *     command service via Joi/Zod before the document reaches this model.
- */
-
 import mongoose from 'mongoose';
 import { ALL_EVENT_TYPES } from '../events/event-types.js';
 import { ImmutabilityViolation } from '../utils/app-errors.js';
 
 const { Schema } = mongoose;
 
-// ─── Schema Definition ─────────────────────────────────────────────────────────
-
 const eventSchema = new Schema(
   {
-    /**
-     * aggregateId — the business identity of the entity this event belongs to.
-     * For logistics, this is typically a shipment ID or container ID (e.g. "SHIP-10042").
-     * Indexed with version to support efficient event stream lookups per aggregate.
-     */
     aggregateId: {
       type: String,
       required: [true, 'aggregateId is required'],
       trim: true,
       index: true,
     },
-
-    /**
-     * eventType — discriminator that tells consumers how to interpret payload.
-     * Must be one of the values defined in events/event-types.js.
-     */
     eventType: {
       type: String,
       required: [true, 'eventType is required'],
@@ -56,100 +21,57 @@ const eventSchema = new Schema(
       },
       index: true,
     },
-
-    /**
-     * payload — event-specific data. Structure varies per eventType.
-     * Kept as Mixed so we don't fight Mongoose when new event types are added.
-     * All structural validation is done upstream (Joi/Zod in command services).
-     */
     payload: {
       type: Schema.Types.Mixed,
-      required: [true, 'payload is required (use {} for events with no data)'],
+      required: [true, 'payload is required'],
       default: {},
     },
-
-    /**
-     * version — monotonically increasing integer per aggregate.
-     * First event for an aggregate is version 1.
-     * Used for Optimistic Concurrency Control: the command layer reads
-     * the current version, increments it, and includes it in the new event.
-     * The unique compound index { aggregateId, version } rejects duplicates
-     * at the DB level as a last line of defence.
-     */
     version: {
       type: Number,
       required: [true, 'version is required'],
       min: [1, 'version must be >= 1'],
     },
-
-    /**
-     * timestamp — when the business event OCCURRED (not when it was stored).
-     * Callers should provide this; Mongoose createdAt covers DB insertion time.
-     * Required separately so historical-state queries can filter by event time.
-     */
     timestamp: {
       type: Date,
       required: [true, 'timestamp is required'],
       index: true,
     },
-
-    /**
-     * metadata — optional bag of infrastructure context: who triggered the
-     * command, correlation/causation IDs for distributed tracing, source IP, etc.
-     * Kept separate from payload so domain logic never mixes with infra concerns.
-     */
     metadata: {
-      causationId:   { type: String, default: null },  // ID of the command that caused this event
-      correlationId: { type: String, default: null },  // ID linking a chain of related events
-      triggeredBy:   { type: String, default: null },  // userId or service name
+      causationId: { type: String, default: null },
+      correlationId: { type: String, default: null },
+      triggeredBy: { type: String, default: null },
+      clientIp: { type: String, default: null },
+      userAgent: { type: String, default: null },
+      originTimestamp: { type: Date, default: null },
+      schemaVersion: { type: Number, default: 1 },
     },
   },
   {
-    // createdAt = DB insertion time (different from timestamp = business event time)
     timestamps: { createdAt: 'storedAt', updatedAt: false },
-
-    // Disable Mongoose's version key (__v) — we manage versioning ourselves
     versionKey: false,
-
-    // Tells Mongoose this collection is append-only — disables buffering updates
     collection: 'events',
   }
 );
 
-// ─── Indexes ───────────────────────────────────────────────────────────────────
-
-/**
- * PRIMARY — supports OCC: guarantees no two events share the same
- * (aggregateId, version) pair. A duplicate-key error here means a concurrent
- * command raced and won; the loser must retry or surface a 409.
- */
 eventSchema.index({ aggregateId: 1, version: 1 }, { unique: true });
-
-/**
- * REPLAY INDEX — used when replaying all events for an aggregate
- * in chronological order (the most common read pattern in the write side).
- */
 eventSchema.index({ aggregateId: 1, timestamp: 1 });
-
-/**
- * HISTORICAL STATE INDEX — supports "state as of <timestamp>" queries
- * by filtering storedAt alongside aggregateId.
- */
 eventSchema.index({ aggregateId: 1, storedAt: 1 });
-
-/**
- * ANALYTICS INDEX — supports queries like "all TEMPERATURE_SPIKE events
- * in the last 24 h" without a full collection scan.
- */
 eventSchema.index({ eventType: 1, timestamp: -1 });
+eventSchema.index({ aggregateId: 1, eventType: 1, version: 1 });
+eventSchema.index({ timestamp: 1, eventType: 1 });
+eventSchema.index({ aggregateId: 1, 'metadata.causationId': 1 }, { sparse: true });
+eventSchema.index({ 'metadata.correlationId': 1 }, { sparse: true });
+eventSchema.index({ 'metadata.triggeredBy': 1 }, { sparse: true });
 
-// ─── Immutability Guards ───────────────────────────────────────────────────────
+eventSchema.pre('save', function (next) {
+  if (!this.isNew) {
+    throw new ImmutabilityViolation(
+      '[EventStore] Modifying an existing event document is forbidden. The event store is strictly append-only.'
+    );
+  }
+  next();
+});
 
-/**
- * Block any mutation or deletion at the Mongoose middleware level.
- * These hooks fire BEFORE the DB operation so they prevent accidents
- * even when someone bypasses the service layer.
- */
 const BLOCKED_OPS = [
   'updateOne',
   'updateMany',
@@ -169,25 +91,10 @@ for (const op of BLOCKED_OPS) {
   });
 }
 
-// ─── Static Query Methods ──────────────────────────────────────────────────────
-
-/**
- * Retrieve the full chronological event stream for a given aggregate.
- * @param {string} aggregateId
- * @param {Object} [options]
- * @param {number} [options.sort=1] - 1 for ascending (chronological), -1 for descending
- * @returns {Promise<Array>}
- */
 eventSchema.statics.findByAggregateId = function (aggregateId, { sort = 1 } = {}) {
   return this.find({ aggregateId }).sort({ version: sort }).lean().exec();
 };
 
-/**
- * Get the current highest version number recorded for an aggregate.
- * Returns 0 if no events exist yet for this aggregate.
- * @param {string} aggregateId
- * @returns {Promise<number>}
- */
 eventSchema.statics.getMaxVersion = async function (aggregateId) {
   const latestEvent = await this.findOne({ aggregateId })
     .sort({ version: -1 })
@@ -198,13 +105,6 @@ eventSchema.statics.getMaxVersion = async function (aggregateId) {
   return latestEvent ? latestEvent.version : 0;
 };
 
-/**
- * Retrieve events appended strictly after a specific version.
- * Useful for incremental projections.
- * @param {string} aggregateId
- * @param {number} sinceVersion
- * @returns {Promise<Array>}
- */
 eventSchema.statics.getEventsSince = function (aggregateId, sinceVersion) {
   return this.find({
     aggregateId,
@@ -215,12 +115,6 @@ eventSchema.statics.getEventsSince = function (aggregateId, sinceVersion) {
     .exec();
 };
 
-/**
- * Retrieve events up to a given historical point in time.
- * @param {string} aggregateId
- * @param {Date|string} targetTimestamp
- * @returns {Promise<Array>}
- */
 eventSchema.statics.getEventsUntilTimestamp = function (aggregateId, targetTimestamp) {
   const cutoff = new Date(targetTimestamp);
   return this.find({
@@ -232,9 +126,91 @@ eventSchema.statics.getEventsUntilTimestamp = function (aggregateId, targetTimes
     .exec();
 };
 
-// ─── Model Export ──────────────────────────────────────────────────────────────
+eventSchema.statics.findByCausationId = function (aggregateId, causationId) {
+  if (!causationId) return null;
+  return this.findOne({ aggregateId, 'metadata.causationId': causationId }).lean().exec();
+};
+
+eventSchema.statics.getEventStreamSlice = function (aggregateId, { fromVersion = 1, toVersion, sort = 1, limit } = {}) {
+  const safeFromVersion = Math.max(1, parseInt(fromVersion, 10) || 1);
+  const safeSort = sort === -1 ? -1 : 1;
+  const query = { aggregateId, version: { $gte: safeFromVersion } };
+
+  if (typeof toVersion === 'number' && !isNaN(toVersion)) {
+    query.version.$lte = Math.max(safeFromVersion, parseInt(toVersion, 10));
+  }
+
+  let cursor = this.find(query).sort({ version: safeSort });
+  if (typeof limit === 'number' && limit > 0) {
+    const safeLimit = Math.min(1000, parseInt(limit, 10) || 100);
+    cursor = cursor.limit(safeLimit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getEventsInTimeRange = function (aggregateId, { fromTimestamp, toTimestamp, sort = 1, limit } = {}) {
+  const safeSort = sort === -1 ? -1 : 1;
+  const query = { aggregateId, timestamp: {} };
+
+  if (fromTimestamp && !isNaN(new Date(fromTimestamp).getTime())) {
+    query.timestamp.$gte = new Date(fromTimestamp);
+  }
+  if (toTimestamp && !isNaN(new Date(toTimestamp).getTime())) {
+    query.timestamp.$lte = new Date(toTimestamp);
+  }
+  if (Object.keys(query.timestamp).length === 0) {
+    delete query.timestamp;
+  }
+
+  let cursor = this.find(query).sort({ timestamp: safeSort, version: safeSort });
+  if (typeof limit === 'number' && limit > 0) {
+    const safeLimit = Math.min(1000, parseInt(limit, 10) || 100);
+    cursor = cursor.limit(safeLimit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getEventsByTypes = function (aggregateId, eventTypes = [], { sort = 1, limit } = {}) {
+  const query = { aggregateId };
+  if (Array.isArray(eventTypes) && eventTypes.length > 0) {
+    query.eventType = { $in: eventTypes };
+  }
+  let cursor = this.find(query).sort({ version: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.getGlobalStream = function ({ sinceStoredAt, limit = 100, eventTypes = [] } = {}) {
+  const query = {};
+  if (sinceStoredAt) {
+    query.storedAt = { $gt: new Date(sinceStoredAt) };
+  }
+  if (Array.isArray(eventTypes) && eventTypes.length > 0) {
+    query.eventType = { $in: eventTypes };
+  }
+  return this.find(query).sort({ storedAt: 1, _id: 1 }).limit(limit).lean().exec();
+};
+
+eventSchema.statics.findByCorrelationId = function (correlationId, { sort = 1, limit } = {}) {
+  if (!correlationId) return Promise.resolve([]);
+  let cursor = this.find({ 'metadata.correlationId': correlationId }).sort({ storedAt: sort, _id: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
+
+eventSchema.statics.findByTriggeredBy = function (triggeredBy, { sort = -1, limit = 50 } = {}) {
+  if (!triggeredBy) return Promise.resolve([]);
+  let cursor = this.find({ 'metadata.triggeredBy': triggeredBy }).sort({ storedAt: sort, _id: sort });
+  if (typeof limit === 'number' && limit > 0) {
+    cursor = cursor.limit(limit);
+  }
+  return cursor.lean().exec();
+};
 
 const Event = mongoose.model('Event', eventSchema);
 
 export default Event;
-

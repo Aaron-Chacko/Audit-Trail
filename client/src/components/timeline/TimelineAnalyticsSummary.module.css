@@ -1,0 +1,113 @@
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) auto;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  align-items: center;
+}
+
+.metricCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  transition: all 0.2s ease;
+}
+
+.metricCard:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.metricAlertCard {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.metricIcon {
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metricContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metricLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.metricValueRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.metricValue {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+.alertValue {
+  color: #f87171;
+}
+
+.filteredBadge {
+  font-size: 0.65rem;
+  color: var(--color-accent-hover);
+  background: rgba(99, 102, 241, 0.15);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.jumpActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.jumpBtn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.jumpBtn:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr 1fr;
+  }
+  .jumpActions {
+    grid-column: span 2;
+    justify-content: stretch;
+  }
+  .jumpBtn {
+    flex: 1;
+    text-align: center;
+  }
+}

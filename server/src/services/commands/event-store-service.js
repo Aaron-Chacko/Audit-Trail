@@ -1,34 +1,12 @@
-/**
- * services/commands/event-store-service.js
- *
- * Core service for interacting with the append-only Event Store.
- *
- * Architecture & Concurrency Rules:
- *  1. Append-Only: All domain state changes must result in a new Event record.
- *  2. Optimistic Concurrency Control (OCC): Every append must verify that the
- *     aggregate's current version matches the expectedVersion provided by the caller.
- *  3. In case of version divergence or database race conditions (E11000),
- *     a ConcurrencyError is thrown to trigger an HTTP 409 Conflict.
- */
-
+import mongoose from 'mongoose';
 import Event from '../../models/Event.js';
 import { isValidEventType } from '../../events/event-types.js';
+import { validateEventPayload } from '../../schemas/event-payload-schemas.js';
 import { ConcurrencyError } from '../../utils/app-errors.js';
+import { sanitizePayload } from '../../utils/payload-sanitizer.js';
+import { buildEventMetadata, createChildMetadata } from '../../utils/metadata-builder.js';
+import { eventStoreMetrics } from '../../utils/event-store-metrics.js';
 
-/**
- * Appends a new domain event to the Event Store for a given aggregate.
- *
- * @param {Object} params
- * @param {string} params.aggregateId - Unique identifier of the domain aggregate (e.g. "SHIP-10042")
- * @param {string} params.eventType   - Valid domain event type from event-types.js
- * @param {Object} [params.payload={}] - Event-specific payload data
- * @param {number} params.expectedVersion - The version the caller expects the aggregate to be at (0 for new aggregates)
- * @param {Date|string} [params.timestamp] - Business occurrence time (defaults to Date.now())
- * @param {Object} [params.metadata={}] - Optional metadata (correlationId, causationId, triggeredBy)
- * @returns {Promise<Object>} The persisted Event document
- * @throws {ConcurrencyError} If expectedVersion does not match current version or upon duplicate key conflict
- * @throws {Error} If eventType is invalid or required fields are missing
- */
 export async function appendEvent({
   aggregateId,
   eventType,
@@ -37,6 +15,8 @@ export async function appendEvent({
   timestamp = new Date(),
   metadata = {},
 }) {
+  const startTime = Date.now();
+
   if (!aggregateId) {
     throw new Error('aggregateId is required to append an event.');
   }
@@ -49,35 +29,180 @@ export async function appendEvent({
     throw new Error('expectedVersion must be a non-negative integer (0 for initial creation).');
   }
 
-  // Step 1: Read current max version for the aggregate
+  if (metadata.causationId) {
+    const existing = await Event.findByCausationId(aggregateId, metadata.causationId);
+    if (existing) {
+      return { ...existing, isIdempotentReplay: true };
+    }
+  }
+
+  const cleanPayload = sanitizePayload(payload);
+  const { error: payloadError, value: validatedPayload } = validateEventPayload(eventType, cleanPayload);
+  if (payloadError) {
+    throw new Error(`Event payload validation failed for "${eventType}": ${payloadError.message}`);
+  }
+
   const currentVersion = await Event.getMaxVersion(aggregateId);
 
-  // Step 2: Validate expected version against current version (OCC check)
   if (currentVersion !== expectedVersion) {
+    eventStoreMetrics.recordConflict();
     throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
   }
 
   const nextVersion = currentVersion + 1;
+  const enrichedMetadata = buildEventMetadata(metadata);
 
-  // Step 3: Instantiate and persist the new Event
   try {
     const event = new Event({
       aggregateId,
       eventType,
-      payload,
+      payload: validatedPayload,
       version: nextVersion,
       timestamp: new Date(timestamp),
-      metadata: {
-        causationId: metadata.causationId || null,
-        correlationId: metadata.correlationId || null,
-        triggeredBy: metadata.triggeredBy || null,
-      },
+      metadata: enrichedMetadata,
     });
 
     const savedEvent = await event.save();
-    return savedEvent.toObject ? savedEvent.toObject() : savedEvent;
+    const result = savedEvent.toObject ? savedEvent.toObject() : savedEvent;
+
+    const payloadSize = JSON.stringify(validatedPayload || {}).length;
+    eventStoreMetrics.recordAppend({
+      eventType,
+      payloadSize,
+      latencyMs: Date.now() - startTime,
+    });
+
+    return result;
   } catch (err) {
-    // MongoDB duplicate key error code 11000 indicates a race condition on (aggregateId, version)
+    if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
+      eventStoreMetrics.recordConflict();
+      throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
+    }
+    throw err;
+  }
+}
+
+export async function checkConcurrency(aggregateId, expectedVersion) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  const currentVersion = await Event.getMaxVersion(aggregateId);
+  const canAppend = currentVersion === expectedVersion;
+  const drift = currentVersion - expectedVersion;
+
+  return {
+    aggregateId,
+    canAppend,
+    currentVersion,
+    expectedVersion,
+    drift,
+  };
+}
+
+export async function appendWithRetry({
+  aggregateId,
+  eventType,
+  payload = {},
+  getPayload = null,
+  expectedVersion = null,
+  maxRetries = 3,
+  retryDelayMs = 50,
+  metadata = {},
+}) {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      const versionTarget = expectedVersion !== null && attempt === 0
+        ? expectedVersion
+        : await Event.getMaxVersion(aggregateId);
+
+      const finalPayload = typeof getPayload === 'function'
+        ? await getPayload(versionTarget)
+        : payload;
+
+      return await appendEvent({
+        aggregateId,
+        eventType,
+        payload: finalPayload,
+        expectedVersion: versionTarget,
+        metadata,
+      });
+    } catch (err) {
+      if (err instanceof ConcurrencyError && attempt < maxRetries) {
+        attempt += 1;
+        const delay = retryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 20;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+export async function appendEventsBatch({
+  aggregateId,
+  events,
+  expectedVersion,
+  metadata = {},
+}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  if (!Array.isArray(events) || events.length === 0) {
+    throw new Error('events must be a non-empty array.');
+  }
+
+  if (typeof expectedVersion !== 'number' || expectedVersion < 0) {
+    throw new Error('expectedVersion must be a non-negative integer.');
+  }
+
+  const enrichedMetadata = buildEventMetadata(metadata);
+
+  const preparedEvents = events.map((ev, index) => {
+    if (!ev.eventType || !isValidEventType(ev.eventType)) {
+      throw new Error(`Invalid eventType at index ${index}: "${ev.eventType}".`);
+    }
+    const cleanPayload = sanitizePayload(ev.payload || {});
+    const { error, value } = validateEventPayload(ev.eventType, cleanPayload);
+    if (error) {
+      throw new Error(`Payload validation failed for event at index ${index} (${ev.eventType}): ${error.message}`);
+    }
+    return {
+      eventType: ev.eventType,
+      payload: value,
+      timestamp: ev.timestamp ? new Date(ev.timestamp) : new Date(),
+    };
+  });
+
+  const currentVersion = await Event.getMaxVersion(aggregateId);
+  if (currentVersion !== expectedVersion) {
+    throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
+  }
+
+  const persisted = [];
+  let runningVersion = currentVersion;
+
+  try {
+    for (const item of preparedEvents) {
+      runningVersion += 1;
+      const eventDoc = new Event({
+        aggregateId,
+        eventType: item.eventType,
+        payload: item.payload,
+        version: runningVersion,
+        timestamp: item.timestamp,
+        metadata: enrichedMetadata,
+      });
+
+      const saved = await eventDoc.save();
+      persisted.push(saved.toObject ? saved.toObject() : saved);
+    }
+
+    return persisted;
+  } catch (err) {
     if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
       throw new ConcurrencyError(aggregateId, expectedVersion, currentVersion);
     }
@@ -85,14 +210,35 @@ export async function appendEvent({
   }
 }
 
-/**
- * Retrieves the full chronological event stream for an aggregate.
- *
- * @param {string} aggregateId
- * @param {Object} [options]
- * @param {number} [options.sort=1] - 1 for chronological (oldest to newest), -1 for reverse
- * @returns {Promise<Array>}
- */
+export async function appendEventWithContext(contextOrReq, eventData, options = {}) {
+  const metadata = buildEventMetadata(contextOrReq, eventData.metadata);
+  if (options.retry) {
+    return appendWithRetry({
+      ...eventData,
+      metadata,
+      ...options,
+    });
+  }
+  return appendEvent({
+    ...eventData,
+    metadata,
+  });
+}
+
+export async function getEventsByCorrelationId(correlationId, options = {}) {
+  if (!correlationId) {
+    throw new Error('correlationId is required.');
+  }
+  return Event.findByCorrelationId(correlationId, options);
+}
+
+export async function getEventsByTriggeredBy(triggeredBy, options = {}) {
+  if (!triggeredBy) {
+    throw new Error('triggeredBy is required.');
+  }
+  return Event.findByTriggeredBy(triggeredBy, options);
+}
+
 export async function getEventsForAggregate(aggregateId, options = { sort: 1 }) {
   if (!aggregateId) {
     throw new Error('aggregateId is required.');
@@ -100,15 +246,152 @@ export async function getEventsForAggregate(aggregateId, options = { sort: 1 }) 
   return Event.findByAggregateId(aggregateId, options);
 }
 
-/**
- * Retrieves the current maximum version for an aggregate.
- *
- * @param {string} aggregateId
- * @returns {Promise<number>}
- */
 export async function getAggregateVersion(aggregateId) {
   if (!aggregateId) {
     throw new Error('aggregateId is required.');
   }
   return Event.getMaxVersion(aggregateId);
 }
+
+export async function getEventStreamSlice(aggregateId, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventStreamSlice(aggregateId, options);
+}
+
+export async function getEventsInTimeRange(aggregateId, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventsInTimeRange(aggregateId, options);
+}
+
+export async function getEventsByTypes(aggregateId, eventTypes, options = {}) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+  return Event.getEventsByTypes(aggregateId, eventTypes, options);
+}
+
+export async function getGlobalStream(options = {}) {
+  return Event.getGlobalStream(options);
+}
+
+export async function getStreamStats(aggregateId) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  const events = await Event.findByAggregateId(aggregateId, { sort: 1 });
+  if (!events || events.length === 0) {
+    return {
+      aggregateId,
+      totalEvents: 0,
+      currentVersion: 0,
+      firstEventAt: null,
+      lastEventAt: null,
+      distinctEventTypes: [],
+    };
+  }
+
+  const distinctEventTypes = [...new Set(events.map(e => e.eventType))];
+
+  return {
+    aggregateId,
+    totalEvents: events.length,
+    currentVersion: events[events.length - 1].version,
+    firstEventAt: events[0].timestamp,
+    lastEventAt: events[events.length - 1].timestamp,
+    distinctEventTypes,
+  };
+}
+
+export async function verifyStreamIntegrity(aggregateId) {
+  if (!aggregateId) {
+    throw new Error('aggregateId is required.');
+  }
+
+  const events = await Event.findByAggregateId(aggregateId, { sort: 1 });
+  const errors = [];
+
+  if (!events || events.length === 0) {
+    return {
+      isValid: true,
+      aggregateId,
+      eventCount: 0,
+      errors: [],
+    };
+  }
+
+  let expectedVersion = 1;
+  let previousTimestamp = new Date(0);
+
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+
+    if (event.version !== expectedVersion) {
+      errors.push(`Version sequence break at index ${i}: expected ${expectedVersion}, found ${event.version}`);
+    }
+
+    const currentTimestamp = new Date(event.timestamp);
+    if (currentTimestamp < previousTimestamp) {
+      errors.push(`Timestamp non-monotonicity at index ${i}: ${currentTimestamp.toISOString()} before ${previousTimestamp.toISOString()}`);
+    }
+
+    if (!isValidEventType(event.eventType)) {
+      errors.push(`Unrecognized eventType "${event.eventType}" at version ${event.version}`);
+    }
+
+    expectedVersion = event.version + 1;
+    previousTimestamp = currentTimestamp;
+  }
+
+  return {
+    isValid: errors.length === 0,
+    aggregateId,
+    eventCount: events.length,
+    errors,
+  };
+}
+
+export async function getEventStoreHealth() {
+  const isConnected = mongoose.connection && mongoose.connection.readyState === 1;
+  const count = isConnected ? await Event.countDocuments().exec() : 0;
+  const mem = process.memoryUsage();
+
+  return {
+    status: isConnected ? 'healthy' : 'disconnected',
+    collection: 'events',
+    immutabilityEnforced: true,
+    totalEvents: count,
+    memoryUsageMB: {
+      rss: Number((mem.rss / (1024 * 1024)).toFixed(2)),
+      heapUsed: Number((mem.heapUsed / (1024 * 1024)).toFixed(2)),
+      heapTotal: Number((mem.heapTotal / (1024 * 1024)).toFixed(2)),
+    },
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date(),
+  };
+}
+
+export function getEventStoreMetrics() {
+  return eventStoreMetrics.getSummary();
+}
+
+export function resetEventStoreMetrics() {
+  eventStoreMetrics.reset();
+  return { reset: true };
+}
+
+export {
+  saveSnapshot,
+  shouldTakeSnapshot,
+  getLatestSnapshot,
+  getSnapshotAtVersion,
+  getSnapshotAtTimestamp,
+  getAcceleratedStream,
+  verifySnapshotIntegrity,
+} from './snapshot-service.js';
+
+
