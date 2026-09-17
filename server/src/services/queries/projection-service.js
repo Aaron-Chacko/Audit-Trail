@@ -17,7 +17,7 @@ export async function projectShipment(aggregateId) {
 
   return ShipmentReadModel.findOneAndUpdate(
     { aggregateId },
-    { ...state, projectedAt: new Date(), sequenceValid: valid },
+    { ...state, projectedAt: new Date() },
     { upsert: true, new: true }
   );
 }

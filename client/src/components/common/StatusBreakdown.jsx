@@ -27,6 +27,17 @@ const STATUS_VARIANTS = {
   cancelled: 'danger',
 };
 
+// BUG-8 FIX: Recharts <Cell> is an SVG element — className has no effect on fill colour.
+// The fill must be passed directly as a prop. These hex values match the CSS
+// variables defined in global.css so the chart stays on-brand.
+const FILL_COLORS = {
+  neutral: '#94a3b8',
+  info:    '#38bdf8',
+  accent:  '#6366f1',
+  success: '#22c55e',
+  danger:  '#ef4444',
+};
+
 export default function StatusBreakdown({ shipments = [] }) {
   const statusCounts = shipments.reduce((counts, shipment) => {
     const status = shipment.status;
@@ -69,7 +80,7 @@ export default function StatusBreakdown({ shipments = [] }) {
               {data.map((entry) => (
                 <Cell
                   key={entry.status}
-                  className={styles[STATUS_VARIANTS[entry.status] ?? 'neutral']}
+                  fill={FILL_COLORS[STATUS_VARIANTS[entry.status]] ?? FILL_COLORS.neutral}
                 />
               ))}
             </Pie>

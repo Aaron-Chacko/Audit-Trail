@@ -27,7 +27,9 @@ const app = express();
 app.use(
   cors({
     origin: env.clientOrigin,
-    methods: ['GET', 'POST'],  // No PUT/PATCH/DELETE — write side uses commands
+    // OPTIONS must be included: browsers send a preflight OPTIONS request before
+    // any cross-origin POST. Without it, commands silently fail in production.
+    methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true,
   })
 );
