@@ -13,3 +13,5 @@ export { default as TimelineFilterToolbar } from './TimelineFilterToolbar.jsx';
 export { default as TimelineAnalyticsSummary } from './TimelineAnalyticsSummary.jsx';
 export { default as TimelineStateScrubber } from './TimelineStateScrubber.jsx';
 export { default as ReconstructedStateCard } from './ReconstructedStateCard.jsx';
+export { default as StateDiffVisualizer } from './StateDiffVisualizer.jsx';
+export { default as SensorTimelineCorrelationChart } from './SensorTimelineCorrelationChart.jsx';

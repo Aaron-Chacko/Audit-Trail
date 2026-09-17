@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import StatusBadge from '@/components/common/StatusBadge.jsx';
 import EventBadge from '@/components/common/EventBadge.jsx';
+import StateDiffVisualizer from './StateDiffVisualizer.jsx';
 import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
 import styles from './ReconstructedStateCard.module.css';
@@ -7,20 +9,24 @@ import styles from './ReconstructedStateCard.module.css';
 /**
  * ReconstructedStateCard
  * Visualizes the point-in-time state of the aggregate as reconstructed by replaying
- * immutable events up to the selected scrubber version.
+ * immutable events up to the selected scrubber version, with integrated mutation diffs.
  *
  * @param {object} props
- * @param {object|null} props.state - Reconstructed aggregate state
+ * @param {object|null} props.state - Reconstructed aggregate state at current version
+ * @param {object|null} [props.prevState] - Reconstructed aggregate state at previous version
  * @param {number} props.maxVersion - Latest aggregate head version
  * @param {boolean} props.isHead - Whether currently at the latest live version
  * @param {Function} [props.onResetToHead] - Callback to return to latest version
  */
 export default function ReconstructedStateCard({
   state,
+  prevState = null,
   maxVersion,
   isHead = false,
   onResetToHead,
 }) {
+  const [showDiff, setShowDiff] = useState(true);
+
   if (!state) return null;
 
   const lastEvent = state.lastEvent;
@@ -39,16 +45,27 @@ export default function ReconstructedStateCard({
           <StatusBadge status={state.status} />
         </div>
 
-        {!isHead && onResetToHead && (
+        <div className={styles.headerActions}>
           <button
             type="button"
-            className={styles.resetHeadBtn}
-            onClick={onResetToHead}
-            title="Jump to live aggregate head"
+            className={styles.diffToggleBtn}
+            onClick={() => setShowDiff(!showDiff)}
+            title="Toggle state mutation diff comparison"
           >
-            ⚡ Return to Live (v{maxVersion})
+            {showDiff ? '▲ Hide State Diff' : '▼ Show State Diff'}
           </button>
-        )}
+
+          {!isHead && onResetToHead && (
+            <button
+              type="button"
+              className={styles.resetHeadBtn}
+              onClick={onResetToHead}
+              title="Jump to live aggregate head"
+            >
+              ⚡ Return to Live (v{maxVersion})
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Replay Notice */}
@@ -131,6 +148,14 @@ export default function ReconstructedStateCard({
           )}
         </div>
       </div>
+
+      {/* Integrated State Mutation Diff Visualizer (Phase 5) */}
+      {showDiff && (
+        <StateDiffVisualizer
+          prevState={prevState}
+          currState={state}
+        />
+      )}
     </div>
   );
 }

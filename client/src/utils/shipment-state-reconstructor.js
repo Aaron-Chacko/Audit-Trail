@@ -15,7 +15,7 @@ import {
   DEPARTED_FROM_PORT,
   CUSTOMS_CLEARED,
   CUSTOMS_HELD,
-} from '@/constants/event-types.js';
+} from '../constants/event-types.js';
 
 /**
  * Pure function that applies a single immutable event to derive the next state snapshot.
