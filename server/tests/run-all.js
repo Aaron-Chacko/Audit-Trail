@@ -21,6 +21,7 @@ const testSuites = [
   'test-payload-encryption.js',
   'test-event-subscription-bus.js',
   'test-command-barrel.js',
+  'test-timeline-engine.js',
 ];
 
 console.log('====================================================');

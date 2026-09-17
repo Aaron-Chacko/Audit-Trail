@@ -17,7 +17,7 @@ import {
   CUSTOMS_HELD,
   ALERT_EVENT_TYPES,
   EVENT_TYPE_LABELS,
-} from '@/constants/event-types.js';
+} from '../constants/event-types.js';
 
 /**
  * Event Categories

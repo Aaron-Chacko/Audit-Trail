@@ -5,7 +5,7 @@
  * Pure functions — no React imports, no side effects.
  */
 
-import { EVENT_TYPE_LABELS } from '@/constants/event-types.js';
+import { EVENT_TYPE_LABELS } from '../constants/event-types.js';
 
 /**
  * Map an event type constant to a human-readable label.

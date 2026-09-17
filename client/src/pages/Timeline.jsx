@@ -8,6 +8,7 @@ import {
   TimelineFilterToolbar,
   TimelineStateScrubber,
   ReconstructedStateCard,
+  SensorTimelineCorrelationChart,
   TimelineStream,
   EventInspectorModal,
 } from '@/components/timeline/index.js';
@@ -19,12 +20,13 @@ import styles from './Timeline.module.css';
 /**
  * pages/Timeline.jsx
  *
- * Chronological Event Timeline & Historical Scrubber Page.
+ * Chronological Event Timeline & Historical Scrubber Page (Complete 5-Phase Suite).
  * Features:
  *  - Full Event Stream visualization (Phase 1)
- *  - Rich Category Badges & Inspector Modal (Phase 2)
+ *  - Rich Category Badges & Deep Inspector Modal (Phase 2)
  *  - Real-Time Search, Category Filtering, Alerts Toggle, and Stream Analytics (Phase 3)
- *  - Interactive State Scrubber, Point-In-Time Reconstructed State, & Time-Travel Player (Phase 4)
+ *  - Interactive State Scrubber, Reconstructed State, & Time-Travel Player (Phase 4)
+ *  - State Mutation Diff Visualizer & Sensor Telemetry Correlation Chart (Phase 5)
  */
 export default function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +36,7 @@ export default function Timeline() {
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' (oldest first) | 'desc' (newest first)
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [inspectingEvent, setInspectingEvent] = useState(null);
+  const [showSensorChart, setShowSensorChart] = useState(true);
 
   // Filter States (Phase 3)
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +44,7 @@ export default function Timeline() {
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [viewDensity, setViewDensity] = useState('detailed'); // 'detailed' | 'compact'
 
-  // Time-Travel Scrubber States (Phase 4)
+  // Time-Travel Scrubber States (Phase 4 & 5)
   const [scrubberVersion, setScrubberVersion] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -76,12 +79,18 @@ export default function Timeline() {
     }
   }, [events, maxVersion]);
 
-  // Point-in-time state reconstruction for the active scrubber version
+  // Point-in-time state reconstruction for current scrubber version & previous version
   const activeVersion = scrubberVersion !== null ? scrubberVersion : maxVersion;
+
   const reconstructedState = useMemo(() => {
     if (!events || events.length === 0) return shipment;
     return reconstructStateAtVersion(events, activeVersion);
   }, [events, activeVersion, shipment]);
+
+  const prevState = useMemo(() => {
+    if (!events || events.length === 0 || activeVersion <= 1) return null;
+    return reconstructStateAtVersion(events, activeVersion - 1);
+  }, [events, activeVersion]);
 
   // Automated Replay Player Simulation Engine
   useEffect(() => {
@@ -111,6 +120,27 @@ export default function Timeline() {
       }
     };
   }, [isPlaying, playbackSpeed, maxVersion]);
+
+  // Keyboard Navigation Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === 'ArrowLeft') {
+        setScrubberVersion((v) => Math.max(1, (v || 1) - 1));
+        setIsPlaying(false);
+      } else if (e.key === 'ArrowRight') {
+        setScrubberVersion((v) => Math.min(maxVersion, (v || 1) + 1));
+        setIsPlaying(false);
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        handleTogglePlay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [maxVersion, activeVersion]);
 
   const handleSelectShipment = (id) => {
     setSelectedId(id);
@@ -278,13 +308,26 @@ export default function Timeline() {
         />
       )}
 
-      {/* Point-in-time Reconstructed State Snapshot Card (Phase 4) */}
+      {/* Point-in-time Reconstructed State Snapshot Card with Integrated State Diff (Phase 4 & 5) */}
       {reconstructedState && (
         <ReconstructedStateCard
           state={reconstructedState}
+          prevState={prevState}
           maxVersion={maxVersion}
           isHead={activeVersion === maxVersion}
           onResetToHead={handleResetToHead}
+        />
+      )}
+
+      {/* Sensor Telemetry & Anomaly Correlation Chart (Phase 5) */}
+      {events && events.length > 0 && showSensorChart && (
+        <SensorTimelineCorrelationChart
+          events={events}
+          currentVersion={activeVersion}
+          onSelectVersion={(v) => {
+            setScrubberVersion(v);
+            setIsPlaying(false);
+          }}
         />
       )}
 
