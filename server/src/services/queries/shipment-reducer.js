@@ -23,6 +23,11 @@ function applyEvent(state, event) {
       };
 
     case LOADED_ON_SHIP:
+      // BUG-9 FIX: Guard against null state (e.g. missing CONTAINER_CREATED event)
+      if (!state) {
+        console.warn(`[Reducer] ${event.eventType} received with no prior state (version ${event.version}). Skipping.`);
+        return state;
+      }
       return {
         ...state,
         status: 'LOADED_ON_SHIP',
@@ -31,6 +36,10 @@ function applyEvent(state, event) {
       };
 
     case TEMPERATURE_SPIKE:
+      if (!state) {
+        console.warn(`[Reducer] ${event.eventType} received with no prior state (version ${event.version}). Skipping.`);
+        return state;
+      }
       return {
         ...state,
         temperature: event.payload?.temperature,
@@ -40,6 +49,10 @@ function applyEvent(state, event) {
       };
 
     case ARRIVED_AT_PORT:
+      if (!state) {
+        console.warn(`[Reducer] ${event.eventType} received with no prior state (version ${event.version}). Skipping.`);
+        return state;
+      }
       return {
         ...state,
         status: 'ARRIVED_AT_PORT',

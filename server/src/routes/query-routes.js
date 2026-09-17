@@ -40,7 +40,7 @@ router.get('/shipments', async (req, res) => {
 
     sendSuccess(res, paginated);
   } catch (err) {
-    sendError(res, err);
+    sendError(res, err.message || 'Failed to list shipments', 500);
   }
 });
 
@@ -51,17 +51,17 @@ router.get('/shipments/summary', async (req, res) => {
     const summary = summarizeShipments(formatted);
     sendSuccess(res, summary);
   } catch (err) {
-    sendError(res, err);
+    sendError(res, err.message || 'Failed to fetch summary', 500);
   }
 });
 
 router.get('/shipments/:id', async (req, res) => {
   try {
     const shipment = await getCurrentState(req.params.id);
-    if (!shipment) return sendError(res, { status: 404, message: 'Shipment not found' });
+    if (!shipment) return sendError(res, 'Shipment not found', 404);
     sendSuccess(res, formatShipmentResponse(shipment));
   } catch (err) {
-    sendError(res, err);
+    sendError(res, err.message || 'Failed to fetch shipment', 500);
   }
 });
 
@@ -70,7 +70,7 @@ router.get('/shipments/:id/history', async (req, res) => {
     const history = await getEventTimeline(req.params.id);
     sendSuccess(res, history);
   } catch (err) {
-    sendError(res, err);
+    sendError(res, err.message || 'Failed to fetch event history', 500);
   }
 });
 
@@ -81,14 +81,14 @@ router.get('/shipments/:id/state-at', async (req, res) => {
 
     const { valid, errors } = validateHistoricalStateQuery(id, timestamp);
     if (!valid) {
-      return sendError(res, { status: 400, message: 'Invalid request', details: errors });
+      return sendError(res, 'Invalid request', 400, errors);
     }
 
     const state = await getHistoricalState(id, timestamp);
-    if (!state) return sendError(res, { status: 404, message: 'No state found before this timestamp' });
+    if (!state) return sendError(res, 'No state found before this timestamp', 404);
     sendSuccess(res, state);
   } catch (err) {
-    sendError(res, err);
+    sendError(res, err.message || 'Failed to reconstruct historical state', 500);
   }
 });
 

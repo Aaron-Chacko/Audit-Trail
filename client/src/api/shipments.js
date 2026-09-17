@@ -38,7 +38,7 @@ export async function getShipmentById(aggregateId) {
  * @returns {Promise<import('../types').ShipmentEvent[]>}
  */
 export async function getShipmentHistory(aggregateId) {
-  return apiClient.get(`/api/queries/shipments/${aggregateId}/events`);
+  return apiClient.get(`/api/queries/shipments/${aggregateId}/history`);
 }
 
 /**
@@ -51,8 +51,8 @@ export async function getShipmentHistory(aggregateId) {
  */
 export async function getShipmentStateAt(aggregateId, asOf) {
   const timestamp = asOf instanceof Date ? asOf.toISOString() : asOf;
-  return apiClient.get(`/api/queries/shipments/${aggregateId}/history`, {
-    params: { asOf: timestamp },
+  return apiClient.get(`/api/queries/shipments/${aggregateId}/state-at`, {
+    params: { timestamp },
   });
 }
 

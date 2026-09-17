@@ -25,6 +25,7 @@ export function useShipment(aggregateId) {
 
     setIsLoading(true);
     setError(null);
+    setShipment(null); // Clear stale data immediately so old result isn't shown for new ID
 
     try {
       const data = await getShipmentById(aggregateId);

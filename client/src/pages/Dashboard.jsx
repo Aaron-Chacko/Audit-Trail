@@ -56,7 +56,7 @@ export default function Dashboard() {
 
       {isLoading && <Loader />}
 
-      {error && <ErrorMessage message={error.message} />}
+      {error && <ErrorMessage error={error} />}
 
       {shipment && !isLoading && (
         <Card title={`Shipment ${shipment.aggregateId}`}>
