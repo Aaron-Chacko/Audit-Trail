@@ -22,6 +22,7 @@ const testSuites = [
   'test-event-subscription-bus.js',
   'test-command-barrel.js',
   'test-timeline-engine.js',
+  'test-anomaly-detector.js',
 ];
 
 console.log('====================================================');
