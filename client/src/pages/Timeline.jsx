@@ -15,6 +15,7 @@ import {
 import { getEventCategory, isAlertEvent } from '@/utils/event-theme.js';
 import { formatEventType } from '@/utils/formatters.js';
 import { reconstructStateAtVersion } from '@/utils/shipment-state-reconstructor.js';
+import { exportTimelineCsv, exportTimelineJson } from '@/utils/timeline-export.js';
 import styles from './Timeline.module.css';
 
 /**
@@ -281,6 +282,8 @@ export default function Timeline() {
         onRefresh={handleRefresh}
         sortOrder={sortOrder}
         onToggleSort={handleToggleSort}
+        onExportCsv={() => exportTimelineCsv(selectedId, events)}
+        onExportJson={() => exportTimelineJson(selectedId, events)}
       />
 
       {/* Stream Analytics Bar */}
