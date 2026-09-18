@@ -15,3 +15,4 @@ export { default as TimelineStateScrubber } from './TimelineStateScrubber.jsx';
 export { default as ReconstructedStateCard } from './ReconstructedStateCard.jsx';
 export { default as StateDiffVisualizer } from './StateDiffVisualizer.jsx';
 export { default as SensorTimelineCorrelationChart } from './SensorTimelineCorrelationChart.jsx';
+export { default as TimelineShortcutsModal } from './TimelineShortcutsModal.jsx';
