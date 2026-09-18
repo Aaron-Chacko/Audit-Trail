@@ -17,6 +17,8 @@ export default function TimelineHeader({
   onRefresh,
   sortOrder = 'asc',
   onToggleSort,
+  onExportCsv,
+  onExportJson,
 }) {
   const [searchInput, setSearchInput] = useState('');
 
@@ -118,6 +120,28 @@ export default function TimelineHeader({
               <span className={styles.sortIcon}>⇅</span>
               <span>{sortOrder === 'asc' ? 'Oldest First (v1 ➔ vN)' : 'Newest First (vN ➔ v1)'}</span>
             </button>
+
+            {/* Export Actions */}
+            {eventsCount > 0 && onExportCsv && (
+              <button
+                type="button"
+                className={styles.exportBtn}
+                onClick={onExportCsv}
+                title="Download event stream as CSV spreadsheet"
+              >
+                📥 CSV
+              </button>
+            )}
+            {eventsCount > 0 && onExportJson && (
+              <button
+                type="button"
+                className={styles.exportBtn}
+                onClick={onExportJson}
+                title="Download complete event envelope as JSON"
+              >
+                📥 JSON
+              </button>
+            )}
 
             {/* Refresh Action */}
             {onRefresh && (

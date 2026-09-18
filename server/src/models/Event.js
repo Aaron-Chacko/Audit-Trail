@@ -10,7 +10,6 @@ const eventSchema = new Schema(
       type: String,
       required: [true, 'aggregateId is required'],
       trim: true,
-      index: true,
     },
     eventType: {
       type: String,
@@ -19,7 +18,6 @@ const eventSchema = new Schema(
         values: ALL_EVENT_TYPES,
         message: '"{VALUE}" is not a recognised event type',
       },
-      index: true,
     },
     payload: {
       type: Schema.Types.Mixed,
@@ -34,7 +32,6 @@ const eventSchema = new Schema(
     timestamp: {
       type: Date,
       required: [true, 'timestamp is required'],
-      index: true,
     },
     metadata: {
       causationId: { type: String, default: null },

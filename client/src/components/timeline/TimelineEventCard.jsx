@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import EventBadge from '@/components/common/EventBadge.jsx';
 import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
@@ -8,15 +8,8 @@ import styles from './TimelineEventCard.module.css';
 /**
  * TimelineEventCard
  * Renders an individual event node in the chronological stream with rich badges & inspection.
- *
- * @param {object} props
- * @param {object} props.event - The event object from Event Store
- * @param {boolean} [props.isFirst] - Whether this is the genesis event (v1)
- * @param {boolean} [props.isLast] - Whether this is the latest event in the stream
- * @param {boolean} [props.isSelected] - Whether this event is currently focused
- * @param {Function} [props.onInspect] - Callback when user clicks Inspect
  */
-export default function TimelineEventCard({
+function TimelineEventCard({
   event,
   isFirst = false,
   isLast = false,
@@ -202,3 +195,5 @@ export default function TimelineEventCard({
     </div>
   );
 }
+
+export default memo(TimelineEventCard);
