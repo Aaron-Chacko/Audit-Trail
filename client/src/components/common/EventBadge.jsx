@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { formatEventType } from '@/utils/formatters.js';
 import { getEventTheme, isAlertEvent } from '@/utils/event-theme.js';
 import styles from './EventBadge.module.css';
@@ -5,15 +6,8 @@ import styles from './EventBadge.module.css';
 /**
  * EventBadge
  * Renders a color-coded, icon-enriched badge for event types.
- *
- * @param {object} props
- * @param {string} props.eventType - Event type constant (e.g. TEMPERATURE_SPIKE)
- * @param {'sm'|'md'|'lg'} [props.size='md'] - Size variant
- * @param {boolean} [props.showIcon=true] - Whether to render category icon
- * @param {string} [props.customLabel] - Optional custom label override
- * @param {boolean} [props.pulse=false] - Optional pulse animation
  */
-export default function EventBadge({
+function EventBadge({
   eventType,
   size = 'md',
   showIcon = true,
@@ -49,3 +43,5 @@ export default function EventBadge({
     </span>
   );
 }
+
+export default memo(EventBadge);
