@@ -2,6 +2,8 @@ import { createShipment } from '../services/commands/shipment-command-service.js
 import { createShipmentSchema } from '../schemas/command-schemas.js';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess, sendError } from '../utils/api-response.js';
+import { createShipment, moveShipment } from '../services/commands/shipment-command-service.js';
+import { createShipmentSchema, moveShipmentSchema } from '../schemas/command-schemas.js';
 
 /**
  * routes/command-routes.js
@@ -54,6 +56,18 @@ router.get('/health', (_req, res) => {
 router.post('/shipments', validate(createShipmentSchema), async (req, res) => {
   try {
     const event = await createShipment(req.body);
+    sendSuccess(res, event, 201);
+  } catch (err) {
+    if (err.name === 'ConcurrencyError') {
+      return sendError(res, err.message, 409);
+    }
+    sendError(res, err.message, 500);
+  }
+});
+
+router.post('/shipments/:id/move', validate(moveShipmentSchema), async (req, res) => {
+  try {
+    const event = await moveShipment({ aggregateId: req.params.id, ...req.body });
     sendSuccess(res, event, 201);
   } catch (err) {
     if (err.name === 'ConcurrencyError') {
