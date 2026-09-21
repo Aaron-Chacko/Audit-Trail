@@ -30,3 +30,16 @@ export async function moveShipment({ aggregateId, toStatus, vesselId, port, ship
 
   return event;
 }
+
+export async function recordTemperature({ aggregateId, temperature, threshold, unit, sensorId }) {
+  const currentVersion = await getAggregateVersion(aggregateId);
+
+  const event = await appendEvent({
+    aggregateId,
+    eventType: TEMPERATURE_SPIKE,
+    payload: { temperature, threshold, unit, sensorId },
+    expectedVersion: currentVersion,
+  });
+
+  return event;
+}

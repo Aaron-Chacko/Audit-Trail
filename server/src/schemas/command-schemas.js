@@ -1,5 +1,13 @@
 import Joi from 'joi';
 
+export const recordTemperatureSchema = Joi.object({
+  aggregateId: Joi.string().trim().required(),
+  temperature: Joi.number().required(),
+  threshold: Joi.number().optional(),
+  unit: Joi.string().trim().default('C'),
+  sensorId: Joi.string().trim().optional(),
+});
+
 export const createShipmentSchema = Joi.object({
   aggregateId: Joi.string().trim().required(),
   destination: Joi.string().trim().allow(null, '').optional(),
