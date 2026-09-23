@@ -17,10 +17,10 @@ const DEMO_SHIPMENTS = [
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialId = searchParams.get("id") || "SHIP-10042";
+  const initialId = searchParams.get("id") || "";
 
   const [searchId, setSearchId] = useState(initialId);
-  const [shipmentId, setShipmentId] = useState(initialId);
+  const [shipmentId, setShipmentId] = useState(initialId || null);
 
   const { shipment, isLoading, error } = useShipment(shipmentId);
 
@@ -90,6 +90,17 @@ export default function Dashboard() {
       {isLoading && <Loader />}
 
       {error && <ErrorMessage error={error} />}
+
+      {!shipmentId && !isLoading && (
+        <Card>
+          <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--color-text-muted)" }}>
+            <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem", color: "var(--color-text)", fontWeight: "600" }}>
+              No Shipment Loaded
+            </p>
+            <p>Type a shipment ID above or click one of the sample shipments to view its live status.</p>
+          </div>
+        </Card>
+      )}
 
       {shipment && !isLoading && (
         <Card title={`Shipment ${activeId}`}>
