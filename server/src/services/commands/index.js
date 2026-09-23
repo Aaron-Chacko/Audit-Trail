@@ -39,3 +39,4 @@ export {
 } from '../../utils/payload-encryptor.js';
 
 export { eventBus } from '../../events/event-subscription-bus.js';
+export { createShipment, moveShipment, recordTemperature } from './shipment-command-service.js';
