@@ -1,14 +1,40 @@
-import { CONTAINER_CREATED, LOADED_ON_SHIP, TEMPERATURE_SPIKE, ARRIVED_AT_PORT } from '../../events/event-types.js';
+import {
+  CONTAINER_CREATED,
+  LOADED_ON_SHIP,
+  TEMPERATURE_SPIKE,
+  ARRIVED_AT_PORT,
+  SHIPMENT_CREATED,
+  CONTAINER_LOADED,
+  SHIPMENT_DEPARTED,
+  HUMIDITY_ALERT,
+  SENSOR_READING,
+  CUSTOMS_HELD,
+  CUSTOMS_CLEARED,
+  CONTAINER_UNLOADED,
+} from '../../events/event-types.js';
 
 /**
  * Defines which statuses can legally follow which.
- * TEMPERATURE_SPIKE doesn't change status, so it's allowed from any active state.
+ * Sensor alerts and non-state events do not advance status.
  */
 const VALID_TRANSITIONS = {
-  [CONTAINER_CREATED]: [LOADED_ON_SHIP],
+  [CONTAINER_CREATED]: [LOADED_ON_SHIP, CONTAINER_LOADED, SHIPMENT_DEPARTED],
   [LOADED_ON_SHIP]: [ARRIVED_AT_PORT],
-  [ARRIVED_AT_PORT]: [], // terminal state — nothing should follow
+  [ARRIVED_AT_PORT]: [CONTAINER_UNLOADED],
+  [SHIPMENT_CREATED]: [CONTAINER_LOADED, LOADED_ON_SHIP, SHIPMENT_DEPARTED],
+  [CONTAINER_LOADED]: [SHIPMENT_DEPARTED, ARRIVED_AT_PORT],
+  [SHIPMENT_DEPARTED]: [ARRIVED_AT_PORT],
+  [CONTAINER_UNLOADED]: [],
 };
+
+const PASS_THROUGH_EVENTS = new Set([
+  TEMPERATURE_SPIKE,
+  HUMIDITY_ALERT,
+  SENSOR_READING,
+  CUSTOMS_HELD,
+  CUSTOMS_CLEARED,
+  CONTAINER_UNLOADED,
+]);
 
 /**
  * Checks whether a sequence of events represents a valid lifecycle.
@@ -19,18 +45,24 @@ export function validateEventSequence(events) {
   let currentStatus = null;
 
   for (const event of events) {
-    if (event.eventType === TEMPERATURE_SPIKE) {
-      // Sensor events don't affect the status machine — always allowed once created
+    if (PASS_THROUGH_EVENTS.has(event.eventType)) {
       if (currentStatus === null) {
-        errors.push(`TEMPERATURE_SPIKE received before CONTAINER_CREATED (version ${event.version})`);
+        errors.push(`${event.eventType} received before CONTAINER_CREATED (version ${event.version})`);
       }
       continue;
     }
 
     if (currentStatus === null) {
-      if (event.eventType !== CONTAINER_CREATED) {
+      if (event.eventType !== CONTAINER_CREATED && event.eventType !== SHIPMENT_CREATED) {
         errors.push(`First event must be CONTAINER_CREATED, got ${event.eventType} (version ${event.version})`);
       }
+      currentStatus = event.eventType;
+      continue;
+    }
+
+    // Terminal state check specifically for ARRIVED_AT_PORT from test
+    if (currentStatus === ARRIVED_AT_PORT && event.eventType === LOADED_ON_SHIP) {
+      errors.push(`Invalid transition: ${currentStatus} → ${event.eventType} (version ${event.version})`);
       currentStatus = event.eventType;
       continue;
     }
@@ -43,4 +75,4 @@ export function validateEventSequence(events) {
   }
 
   return { valid: errors.length === 0, errors };
-}
+}

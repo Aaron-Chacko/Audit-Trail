@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import Card from "@/components/common/Card.jsx";
 import ErrorMessage from "@/components/common/ErrorMessage.jsx";
@@ -8,21 +9,39 @@ import { useShipment } from "@/hooks/useShipment.js";
 
 import styles from "./Dashboard.module.css";
 
+const DEMO_SHIPMENTS = [
+  { id: "SHIP-10042", label: "SHIP-10042 (Vaccines • Temp Alert)" },
+  { id: "SHIP-10043", label: "SHIP-10043 (Electronics • Customs Hold)" },
+  { id: "SHIP-10044", label: "SHIP-10044 (Spices • In Transit)" },
+];
+
 export default function Dashboard() {
-  const [searchId, setSearchId] = useState("");
-  const [shipmentId, setShipmentId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialId = searchParams.get("id") || "SHIP-10042";
+
+  const [searchId, setSearchId] = useState(initialId);
+  const [shipmentId, setShipmentId] = useState(initialId);
 
   const { shipment, isLoading, error } = useShipment(shipmentId);
 
   const handleSearch = (event) => {
     event.preventDefault();
 
-    const id = searchId.trim();
+    const id = searchId.trim().toUpperCase();
 
     if (id) {
       setShipmentId(id);
+      setSearchParams({ id });
     }
   };
+
+  const handleSelectDemo = (id) => {
+    setSearchId(id);
+    setShipmentId(id);
+    setSearchParams({ id });
+  };
+
+  const activeId = shipment?.aggregateId || shipment?.id || shipmentId;
 
   return (
     <div className={styles.dashboard}>
@@ -52,6 +71,20 @@ export default function Dashboard() {
             {isLoading ? "Searching..." : "Search"}
           </button>
         </form>
+
+        <div className={styles.quickSelectRow}>
+          <span className={styles.quickLabel}>Quick Load Demo:</span>
+          {DEMO_SHIPMENTS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`${styles.quickChip} ${shipmentId === item.id ? styles.quickChipActive : ""}`}
+              onClick={() => handleSelectDemo(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </Card>
 
       {isLoading && <Loader />}
@@ -59,7 +92,16 @@ export default function Dashboard() {
       {error && <ErrorMessage error={error} />}
 
       {shipment && !isLoading && (
-        <Card title={`Shipment ${shipment.aggregateId}`}>
+        <Card title={`Shipment ${activeId}`}>
+          <div className={styles.cardHeaderRow}>
+            <Link
+              to={`/timeline?id=${activeId}`}
+              className={styles.timelineLinkBtn}
+              title="Open full interactive event timeline and replay scrubber"
+            >
+              View Event Timeline ➔
+            </Link>
+          </div>
           <div className={styles.content}>
             <div className={styles.section}>
               <span className={styles.label}>Status</span>
