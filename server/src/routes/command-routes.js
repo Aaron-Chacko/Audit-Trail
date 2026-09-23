@@ -1,11 +1,8 @@
-import { createShipment } from '../services/commands/shipment-command-service.js';
-import { createShipmentSchema } from '../schemas/command-schemas.js';
-import { validate } from '../middleware/validate.js';
-import { sendSuccess, sendError } from '../utils/api-response.js';
-import { createShipment, moveShipment } from '../services/commands/shipment-command-service.js';
-import { createShipmentSchema, moveShipmentSchema } from '../schemas/command-schemas.js';
+import { Router } from 'express';
 import { createShipment, moveShipment, recordTemperature } from '../services/commands/shipment-command-service.js';
 import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema } from '../schemas/command-schemas.js';
+import { validate } from '../middleware/validate.js';
+import { sendSuccess, sendError } from '../utils/api-response.js';
 
 /**
  * routes/command-routes.js
@@ -20,8 +17,6 @@ import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema } fro
  *   1. Attach validation middleware
  *   2. Delegate to the appropriate command controller
  */
-
-import { Router } from 'express';
 
 // Controllers are added here as they are built in later sprints.
 // e.g.: import * as shipmentCommandController from '../controllers/commands/shipment-command-controller.js';
