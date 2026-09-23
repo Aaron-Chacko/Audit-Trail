@@ -119,9 +119,10 @@
 }
 
 .quickChipActive {
-  background: var(--color-accent);
-  color: white;
-  border-color: var(--color-accent);
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
 }
 
 .cardHeaderRow {

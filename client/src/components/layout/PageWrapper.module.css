@@ -40,10 +40,15 @@
   transition: color 0.15s, background-color 0.15s;
 }
 
-.navLink:hover,
-.navLinkActive {
+.navLink:hover {
   color: var(--color-text);
   background-color: var(--color-surface-2);
+}
+
+.navLinkActive {
+  color: #000000;
+  background-color: #ffffff;
+  font-weight: 700;
 }
 
 .main {
