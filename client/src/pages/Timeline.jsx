@@ -269,9 +269,9 @@ export default function Timeline() {
     <div className={styles.pageContainer}>
       {/* Page Header */}
       <div className={styles.headerSection}>
-        <h1 className={styles.pageTitle}>Chronological Event Timeline</h1>
+        <h1 className={styles.pageTitle}>Event History & Timeline</h1>
         <p className={styles.pageSubtitle}>
-          Audit Trail immutable event ledger. Reconstruct historical aggregate states, scrub through version history, and replay state transitions.
+          View full history, step through updates, and check status over time.
         </p>
       </div>
 
@@ -287,7 +287,6 @@ export default function Timeline() {
         sortOrder={sortOrder}
         onToggleSort={handleToggleSort}
         onExportCsv={() => exportTimelineCsv(selectedId, events)}
-        onExportJson={() => exportTimelineJson(selectedId, events)}
       />
 
       {/* Stream Analytics Bar */}

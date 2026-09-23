@@ -95,7 +95,7 @@ export default function TimelineAnalyticsSummary({
       <div className={styles.metricCard}>
         <div className={styles.metricIcon}>📜</div>
         <div className={styles.metricContent}>
-          <span className={styles.metricLabel}>Total Events</span>
+          <span className={styles.metricLabel}>Total Updates</span>
           <div className={styles.metricValueRow}>
             <span className={styles.metricValue}>{stats.total}</span>
             {isFiltered && (
@@ -116,9 +116,9 @@ export default function TimelineAnalyticsSummary({
       >
         <div className={styles.metricIcon}>{stats.alerts > 0 ? '⚠️' : '✅'}</div>
         <div className={styles.metricContent}>
-          <span className={styles.metricLabel}>Ledger Alerts</span>
+          <span className={styles.metricLabel}>Alerts & Warnings</span>
           <span className={`${styles.metricValue} ${stats.alerts > 0 ? styles.alertValue : ''}`}>
-            {stats.alerts} {stats.alerts === 1 ? 'Incident' : 'Incidents'}
+            {stats.alerts} {stats.alerts === 1 ? 'Alert' : 'Alerts'}
           </span>
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function TimelineAnalyticsSummary({
       <div className={styles.metricCard}>
         <div className={styles.metricIcon}>⏱️</div>
         <div className={styles.metricContent}>
-          <span className={styles.metricLabel}>Stream Timespan</span>
+          <span className={styles.metricLabel}>Time Elapsed</span>
           <span className={styles.metricValue}>{stats.durationText}</span>
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function TimelineAnalyticsSummary({
       <div className={styles.metricCard}>
         <div className={styles.metricIcon}>🏷️</div>
         <div className={styles.metricContent}>
-          <span className={styles.metricLabel}>Distinct Types</span>
+          <span className={styles.metricLabel}>Event Types</span>
           <span className={styles.metricValue}>{stats.distinctTypes} Types</span>
         </div>
       </div>
@@ -148,9 +148,9 @@ export default function TimelineAnalyticsSummary({
             type="button"
             className={styles.jumpBtn}
             onClick={onJumpToGenesis}
-            title="Scroll to Genesis event (v1)"
+            title="Scroll to Step 1"
           >
-            ⬆ Genesis (v1)
+            ⬆ Start (Step 1)
           </button>
         )}
         {onJumpToHead && (
@@ -158,9 +158,9 @@ export default function TimelineAnalyticsSummary({
             type="button"
             className={styles.jumpBtn}
             onClick={onJumpToHead}
-            title="Scroll to Stream Head (Latest)"
+            title="Scroll to Latest Step"
           >
-            ⬇ Head (v{stats.total})
+            ⬇ Latest (Step {stats.total})
           </button>
         )}
       </div>

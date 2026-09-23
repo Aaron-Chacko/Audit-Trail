@@ -18,7 +18,6 @@ export default function TimelineHeader({
   sortOrder = 'asc',
   onToggleSort,
   onExportCsv,
-  onExportJson,
 }) {
   const [searchInput, setSearchInput] = useState('');
 
@@ -42,10 +41,10 @@ export default function TimelineHeader({
             <input
               type="text"
               className={styles.searchInput}
-              placeholder="Enter Aggregate ID (e.g. SHIP-10042)..."
+              placeholder="Enter Shipment ID (e.g. SHIP-10042)..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              aria-label="Shipment Aggregate ID"
+              aria-label="Shipment ID"
             />
           </div>
           <button
@@ -59,7 +58,7 @@ export default function TimelineHeader({
 
         {/* Quick Sample Selector Pills */}
         <div className={styles.quickPills}>
-          <span className={styles.quickLabel}>Quick Load:</span>
+          <span className={styles.quickLabel}>Select Shipment:</span>
           {sampleShipments.map((id) => (
             <button
               key={id}
@@ -73,12 +72,12 @@ export default function TimelineHeader({
         </div>
       </div>
 
-      {/* Aggregate Overview Card (When a shipment is loaded) */}
+      {/* Overview Card */}
       {selectedId && (
         <div className={styles.overviewCard}>
           <div className={styles.primaryInfo}>
             <div className={styles.idGroup}>
-              <span className={styles.entityType}>AGGREGATE</span>
+              <span className={styles.entityType}>SHIPMENT</span>
               <h2 className={styles.aggregateTitle}>{selectedId}</h2>
               {shipment?.status && <StatusBadge status={shipment.status} />}
             </div>
@@ -99,13 +98,13 @@ export default function TimelineHeader({
           <div className={styles.controlsGroup}>
             {/* Stream Stats */}
             <div className={styles.statBox}>
-              <span className={styles.statLabel}>Total Events</span>
+              <span className={styles.statLabel}>Total Updates</span>
               <span className={styles.statValue}>{eventsCount}</span>
             </div>
 
             {shipment?.version != null && (
               <div className={styles.statBox}>
-                <span className={styles.statLabel}>Latest Version</span>
+                <span className={styles.statLabel}>Current Step</span>
                 <span className={styles.statValue}>v{shipment.version}</span>
               </div>
             )}
@@ -118,7 +117,7 @@ export default function TimelineHeader({
               title={sortOrder === 'asc' ? 'Showing Oldest First' : 'Showing Newest First'}
             >
               <span className={styles.sortIcon}>⇅</span>
-              <span>{sortOrder === 'asc' ? 'Oldest First (v1 ➔ vN)' : 'Newest First (vN ➔ v1)'}</span>
+              <span>{sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}</span>
             </button>
 
             {/* Export Actions */}
@@ -127,19 +126,9 @@ export default function TimelineHeader({
                 type="button"
                 className={styles.exportBtn}
                 onClick={onExportCsv}
-                title="Download event stream as CSV spreadsheet"
+                title="Download spreadsheet report"
               >
-                📥 CSV
-              </button>
-            )}
-            {eventsCount > 0 && onExportJson && (
-              <button
-                type="button"
-                className={styles.exportBtn}
-                onClick={onExportJson}
-                title="Download complete event envelope as JSON"
-              >
-                📥 JSON
+                📥 Export CSV
               </button>
             )}
 

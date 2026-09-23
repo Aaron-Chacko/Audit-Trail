@@ -10,9 +10,9 @@ import { useShipment } from "@/hooks/useShipment.js";
 import styles from "./Dashboard.module.css";
 
 const DEMO_SHIPMENTS = [
-  { id: "SHIP-10042", label: "SHIP-10042 (Vaccines • Temp Alert)" },
-  { id: "SHIP-10043", label: "SHIP-10043 (Electronics • Customs Hold)" },
-  { id: "SHIP-10044", label: "SHIP-10044 (Spices • In Transit)" },
+  { id: "SHIP-10042", label: "SHIP-10042 (Vaccines - Temp Alert)" },
+  { id: "SHIP-10043", label: "SHIP-10043 (Electronics - Customs Hold)" },
+  { id: "SHIP-10044", label: "SHIP-10044 (Spices - In Transit)" },
 ];
 
 export default function Dashboard() {
@@ -48,7 +48,7 @@ export default function Dashboard() {
       <div className={styles.header}>
         <h1 className={styles.title}>Shipment Dashboard</h1>
         <p className={styles.subtitle}>
-          Search for a shipment to view its current state.
+          Select or search a shipment ID to see its live details.
         </p>
       </div>
 
@@ -68,12 +68,12 @@ export default function Dashboard() {
             type="submit"
             disabled={!searchId.trim() || isLoading}
           >
-            {isLoading ? "Searching..." : "Search"}
+            {isLoading ? "Loading..." : "Search"}
           </button>
         </form>
 
         <div className={styles.quickSelectRow}>
-          <span className={styles.quickLabel}>Quick Load Demo:</span>
+          <span className={styles.quickLabel}>Sample Shipments:</span>
           {DEMO_SHIPMENTS.map((item) => (
             <button
               key={item.id}
@@ -97,9 +97,9 @@ export default function Dashboard() {
             <Link
               to={`/timeline?id=${activeId}`}
               className={styles.timelineLinkBtn}
-              title="Open full interactive event timeline and replay scrubber"
+              title="View full event history and replay timeline"
             >
-              View Event Timeline ➔
+              View Full History ➔
             </Link>
           </div>
           <div className={styles.content}>
