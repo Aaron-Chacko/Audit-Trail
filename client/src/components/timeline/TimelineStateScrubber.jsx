@@ -1,21 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import { isAlertEvent } from '@/utils/event-theme.js';
 import styles from './TimelineStateScrubber.module.css';
 
 /**
  * TimelineStateScrubber
  * Time-travel control dock allowing interactive version scrubbing,
- * step-by-step navigation, and automated event replay simulation.
- *
- * @param {object} props
- * @param {number} props.currentVersion - Current scrubbed version (1..maxVersion)
- * @param {number} props.maxVersion - Latest available version
- * @param {Function} props.onChangeVersion - Handler when scrub position changes
- * @param {boolean} props.isPlaying - Whether automated replay simulation is active
- * @param {Function} props.onTogglePlay - Toggle play/pause simulation
- * @param {number} props.playbackSpeed - Playback speed multiplier (0.5, 1, 2, 3)
- * @param {Function} props.onChangeSpeed - Handler to change playback speed
- * @param {Array} props.events - List of events for plotting incident markers
+ * step-by-step navigation, and automated event replay simulation with anime.js micro-interactions.
  */
 export default function TimelineStateScrubber({
   currentVersion = 1,
@@ -27,6 +18,9 @@ export default function TimelineStateScrubber({
   onChangeSpeed,
   events = [],
 }) {
+  const dockRef = useRef(null);
+  const playBtnRef = useRef(null);
+
   const canStepBack = currentVersion > 1;
   const canStepForward = currentVersion < maxVersion;
 
@@ -41,6 +35,33 @@ export default function TimelineStateScrubber({
     return set;
   }, [events]);
 
+  // Spring animation on play button toggle
+  useEffect(() => {
+    if (playBtnRef.current) {
+      anime({
+        targets: playBtnRef.current,
+        scale: [0.93, 1],
+        duration: 300,
+        easing: 'easeOutElastic(1, .5)',
+      });
+    }
+  }, [isPlaying]);
+
+  // Active version indicator pulse
+  useEffect(() => {
+    if (dockRef.current) {
+      const activeTick = dockRef.current.querySelector(`.${styles.tickCurrent}`);
+      if (activeTick) {
+        anime({
+          targets: activeTick,
+          scale: [0.85, 1],
+          duration: 300,
+          easing: 'easeOutElastic(1, .6)',
+        });
+      }
+    }
+  }, [currentVersion]);
+
   const handleSliderChange = (e) => {
     const nextVal = parseInt(e.target.value, 10);
     if (!isNaN(nextVal)) {
@@ -48,19 +69,38 @@ export default function TimelineStateScrubber({
     }
   };
 
-  const handleStepGenesis = () => onChangeVersion(1);
-  const handleStepBack = () => {
+  const handleStepGenesis = (e) => {
+    animateClick(e);
+    onChangeVersion(1);
+  };
+  const handleStepBack = (e) => {
+    animateClick(e);
     if (canStepBack) onChangeVersion(currentVersion - 1);
   };
-  const handleStepForward = () => {
+  const handleStepForward = (e) => {
+    animateClick(e);
     if (canStepForward) onChangeVersion(currentVersion + 1);
   };
-  const handleStepHead = () => onChangeVersion(maxVersion);
+  const handleStepHead = (e) => {
+    animateClick(e);
+    onChangeVersion(maxVersion);
+  };
+
+  const animateClick = (e) => {
+    if (e?.currentTarget) {
+      anime({
+        targets: e.currentTarget,
+        scale: [0.9, 1],
+        duration: 250,
+        easing: 'easeOutElastic(1, .5)',
+      });
+    }
+  };
 
   const speedOptions = [0.5, 1, 2, 3];
 
   return (
-    <div className={styles.scrubberDock}>
+    <div ref={dockRef} className={styles.scrubberDock}>
       <div className={styles.dockHeader}>
         <div className={styles.titleGroup}>
           <span className={styles.icon}>🎛️</span>
@@ -109,7 +149,10 @@ export default function TimelineStateScrubber({
                   ${isCurrent ? styles.tickCurrent : ''}
                   ${hasAlert ? styles.tickAlert : ''}
                 `}
-                onClick={() => onChangeVersion(v)}
+                onClick={(e) => {
+                  animateClick(e);
+                  onChangeVersion(v);
+                }}
                 title={`Jump to Version ${v}${hasAlert ? ' (⚠️ Alert Event)' : ''}`}
               >
                 <span className={styles.tickDot} />
@@ -145,6 +188,7 @@ export default function TimelineStateScrubber({
 
           {/* Main Play / Pause Button */}
           <button
+            ref={playBtnRef}
             type="button"
             className={`${styles.playBtn} ${isPlaying ? styles.pauseBtn : ''}`}
             onClick={onTogglePlay}
@@ -184,7 +228,10 @@ export default function TimelineStateScrubber({
                 ${styles.speedBtn}
                 ${playbackSpeed === spd ? styles.speedBtnActive : ''}
               `}
-              onClick={() => onChangeSpeed(spd)}
+              onClick={(e) => {
+                animateClick(e);
+                onChangeSpeed(spd);
+              }}
             >
               {spd}x
             </button>

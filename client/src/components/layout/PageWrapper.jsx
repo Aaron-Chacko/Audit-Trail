@@ -1,30 +1,18 @@
-/**
- * components/layout/PageWrapper.jsx
- *
- * Shared layout shell used by every page.
- * Renders the Navbar and wraps page content in a centred <main> container.
- *
- * Usage:
- *   // In App.jsx route outlet — wraps all page components automatically.
- *   // Or use directly:
- *   <PageWrapper>
- *     <YourPageContent />
- *   </PageWrapper>
- */
-
 import { NavLink } from 'react-router-dom';
 import styles from './PageWrapper.module.css';
 
 /**
- * @param {{ children: React.ReactNode }} props
- */
+  * components/layout/PageWrapper.jsx
+  * Shared layout shell used by every page.
+  */
 export default function PageWrapper({ children }) {
   return (
     <>
       <header>
         <nav className={styles.navbar}>
           <NavLink to="/" className={styles.brand}>
-            ⬡ Audit Trail
+            <span className={styles.brandIcon}>◈</span>
+            <span>Audit Trail</span>
           </NavLink>
 
           <div className={styles.nav}>
