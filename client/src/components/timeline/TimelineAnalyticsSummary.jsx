@@ -1,17 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
+import anime from '@/utils/anime.js';
 import { isAlertEvent, getEventCategory, EVENT_CATEGORIES } from '@/utils/event-theme.js';
 import styles from './TimelineAnalyticsSummary.module.css';
 
 /**
  * TimelineAnalyticsSummary
  * Visual analytics metrics bar summarizing event stream composition, duration,
- * and anomaly alerts for the active shipment.
- *
- * @param {object} props
- * @param {Array} props.events - Complete raw events array
- * @param {Array} props.filteredEvents - Events matching active filters
- * @param {Function} [props.onJumpToGenesis] - Callback to scroll to genesis node
- * @param {Function} [props.onJumpToHead] - Callback to scroll to head node
+ * and anomaly alerts for the active shipment with anime.js animated counters.
  */
 export default function TimelineAnalyticsSummary({
   events = [],
@@ -19,6 +14,10 @@ export default function TimelineAnalyticsSummary({
   onJumpToGenesis,
   onJumpToHead,
 }) {
+  const containerRef = useRef(null);
+  const [animatedTotal, setAnimatedTotal] = useState(0);
+  const [animatedAlerts, setAnimatedAlerts] = useState(0);
+
   const stats = useMemo(() => {
     if (!events || events.length === 0) {
       return {
@@ -85,19 +84,52 @@ export default function TimelineAnalyticsSummary({
     };
   }, [events]);
 
+  // Anime.js count-up effect
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+
+    const counterObj = { total: 0, alerts: 0 };
+    const anim = anime({
+      targets: counterObj,
+      total: stats.total,
+      alerts: stats.alerts,
+      round: 1,
+      duration: 800,
+      easing: 'easeOutExpo',
+      update: () => {
+        setAnimatedTotal(Math.round(counterObj.total));
+        setAnimatedAlerts(Math.round(counterObj.alerts));
+      },
+    });
+
+    // Stagger card entrance
+    if (containerRef.current) {
+      anime({
+        targets: containerRef.current.children,
+        opacity: [0, 1],
+        translateY: [-10, 0],
+        delay: anime.stagger(60),
+        duration: 400,
+        easing: 'easeOutQuad',
+      });
+    }
+
+    return () => anim?.cancel();
+  }, [events, stats.total, stats.alerts]);
+
   if (!events || events.length === 0) return null;
 
   const isFiltered = filteredEvents.length !== events.length;
 
   return (
-    <div className={styles.container}>
+    <div ref={containerRef} className={styles.container}>
       {/* Metric 1: Total Stream Events */}
       <div className={styles.metricCard}>
         <div className={styles.metricIcon}>📜</div>
         <div className={styles.metricContent}>
           <span className={styles.metricLabel}>Total Updates</span>
           <div className={styles.metricValueRow}>
-            <span className={styles.metricValue}>{stats.total}</span>
+            <span className={styles.metricValue}>{animatedTotal}</span>
             {isFiltered && (
               <span className={styles.filteredBadge}>
                 Showing {filteredEvents.length}
@@ -118,7 +150,7 @@ export default function TimelineAnalyticsSummary({
         <div className={styles.metricContent}>
           <span className={styles.metricLabel}>Alerts & Warnings</span>
           <span className={`${styles.metricValue} ${stats.alerts > 0 ? styles.alertValue : ''}`}>
-            {stats.alerts} {stats.alerts === 1 ? 'Alert' : 'Alerts'}
+            {animatedAlerts} {stats.alerts === 1 ? 'Alert' : 'Alerts'}
           </span>
         </div>
       </div>

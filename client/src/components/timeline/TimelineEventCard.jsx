@@ -1,4 +1,5 @@
 import { useState, memo } from 'react';
+import anime from '@/utils/anime.js';
 import EventBadge from '@/components/common/EventBadge.jsx';
 import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
@@ -15,24 +16,15 @@ function TimelineEventCard({
   isLast = false,
   isSelected = false,
   onInspect,
+  onSelect,
 }) {
-  const [isPayloadExpanded, setIsPayloadExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
 
   if (!event) return null;
 
   const isAlert = isAlertEvent(event.eventType);
   const relativeTime = formatRelativeTime(event.timestamp);
   const absoluteTime = formatEventTimestamp(event.timestamp);
-
-  const handleCopyPayload = (e) => {
-    e.stopPropagation();
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(JSON.stringify(event.payload, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const renderSummaryBadges = () => {
     const payload = event.payload || {};
@@ -93,6 +85,23 @@ function TimelineEventCard({
 
   const summaryBadges = renderSummaryBadges();
 
+  const handleInspectClick = (e) => {
+    if (e?.currentTarget) {
+      anime({
+        targets: e.currentTarget,
+        scale: [0.92, 1],
+        duration: 250,
+        easing: 'easeOutElastic(1, .5)',
+      });
+    }
+    if (onInspect) onInspect(event);
+  };
+
+  const handleNodeClick = (e) => {
+    e.stopPropagation();
+    if (onSelect) onSelect(event.version);
+  };
+
   return (
     <div
       className={`
@@ -101,6 +110,8 @@ function TimelineEventCard({
         ${isSelected ? styles.selectedContainer : ''}
       `}
       id={`event-node-v${event.version}`}
+      onClick={() => onSelect && onSelect(event.version)}
+      style={{ cursor: 'pointer' }}
     >
       {/* Node Track Column */}
       <div className={styles.trackColumn}>
@@ -111,7 +122,8 @@ function TimelineEventCard({
             ${isFirst ? styles.genesisMarker : ''}
             ${isLast ? styles.latestMarker : ''}
           `}
-          title={`Version ${event.version}`}
+          title={`Step ${event.version} - Click to time-travel`}
+          onClick={handleNodeClick}
         >
           {isAlert ? '⚠️' : event.version}
         </div>
@@ -122,9 +134,9 @@ function TimelineEventCard({
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <div className={styles.titleGroup}>
-            <span className={styles.versionTag}>v{event.version}</span>
+            <span className={styles.versionTag}>Step {event.version}</span>
             <EventBadge eventType={event.eventType} size="md" pulse={isAlert} />
-            {isFirst && <span className={styles.tagGenesis}>Genesis</span>}
+            {isFirst && <span className={styles.tagGenesis}>Start</span>}
             {isLast && <span className={styles.tagLatest}>Latest</span>}
           </div>
 
@@ -153,42 +165,40 @@ function TimelineEventCard({
           <button
             type="button"
             className={styles.togglePayloadBtn}
-            onClick={() => setIsPayloadExpanded(!isPayloadExpanded)}
-            aria-expanded={isPayloadExpanded}
+            onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+            aria-expanded={isDetailsExpanded}
           >
-            <span className={styles.chevron}>{isPayloadExpanded ? '▾' : '▸'}</span>
-            {isPayloadExpanded ? 'Hide Payload' : 'Preview Payload'}
+            <span className={styles.chevron}>{isDetailsExpanded ? '▾' : '▸'}</span>
+            {isDetailsExpanded ? 'Hide Details' : 'View Quick Details'}
           </button>
 
           <div className={styles.footerActions}>
-            <button
-              type="button"
-              className={styles.copyBtn}
-              onClick={handleCopyPayload}
-              title="Copy event payload JSON"
-            >
-              {copied ? '✓ Copied' : 'Copy JSON'}
-            </button>
-
             {onInspect && (
               <button
                 type="button"
                 className={styles.inspectBtn}
-                onClick={() => onInspect(event)}
+                onClick={handleInspectClick}
                 title="Open detailed event inspector modal"
               >
-                🔍 Inspect Event
+                🔍 Inspect Details
               </button>
             )}
           </div>
         </div>
 
-        {/* Expandable JSON Payload Preview */}
-        {isPayloadExpanded && (
+        {/* Expandable Quick Details Summary Drawer */}
+        {isDetailsExpanded && (
           <div className={styles.payloadDrawer}>
-            <pre className={styles.codeBlock}>
-              <code>{JSON.stringify(event.payload ?? {}, null, 2)}</code>
-            </pre>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.82rem', padding: '0.5rem 0' }}>
+              {Object.entries(event.payload || {}).map(([key, val]) => (
+                <div key={key} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ color: 'var(--color-text-muted)', textTransform: 'capitalize', display: 'block', fontSize: '0.72rem' }}>{key}</span>
+                  <span style={{ color: 'var(--color-text)', fontWeight: '500' }}>
+                    {typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

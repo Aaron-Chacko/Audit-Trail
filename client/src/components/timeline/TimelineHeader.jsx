@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import StatusBadge from '@/components/common/StatusBadge.jsx';
 import styles from './TimelineHeader.module.css';
 
@@ -20,6 +21,7 @@ export default function TimelineHeader({
   onExportCsv,
 }) {
   const [searchInput, setSearchInput] = useState('');
+  const refreshIconRef = useRef(null);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -27,6 +29,30 @@ export default function TimelineHeader({
     if (cleanId) {
       onSelectShipment(cleanId);
     }
+  };
+
+  const handlePillClick = (id, e) => {
+    if (e?.currentTarget) {
+      anime({
+        targets: e.currentTarget,
+        scale: [0.92, 1],
+        duration: 250,
+        easing: 'easeOutElastic(1, .5)',
+      });
+    }
+    onSelectShipment(id);
+  };
+
+  const handleRefreshClick = (e) => {
+    if (refreshIconRef.current) {
+      anime({
+        targets: refreshIconRef.current,
+        rotate: '+=360',
+        duration: 600,
+        easing: 'easeOutQuad',
+      });
+    }
+    if (onRefresh) onRefresh();
   };
 
   const sampleShipments = ['SHIP-10042', 'SHIP-10043', 'SHIP-10044'];
@@ -64,7 +90,7 @@ export default function TimelineHeader({
               key={id}
               type="button"
               className={`${styles.pillBtn} ${selectedId === id ? styles.pillActive : ''}`}
-              onClick={() => onSelectShipment(id)}
+              onClick={(e) => handlePillClick(id, e)}
             >
               {id}
             </button>
@@ -137,11 +163,11 @@ export default function TimelineHeader({
               <button
                 type="button"
                 className={`${styles.refreshBtn} ${isRefreshing ? styles.refreshing : ''}`}
-                onClick={onRefresh}
+                onClick={handleRefreshClick}
                 disabled={isLoading || isRefreshing}
                 title="Refetch event stream"
               >
-                <span className={styles.refreshIcon}>↻</span>
+                <span ref={refreshIconRef} className={styles.refreshIcon}>↻</span>
                 <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
               </button>
             )}

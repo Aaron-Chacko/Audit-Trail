@@ -263,18 +263,12 @@ export default function Timeline() {
     });
   }, [events, alertsOnly, selectedCategory, searchQuery]);
 
+  const [inspectorTab, setInspectorTab] = useState('state'); // 'state' | 'chart' | 'stats'
+
   const isLoading = isShipmentLoading || isEventsLoading;
 
   return (
     <div className={styles.pageContainer}>
-      {/* Page Header */}
-      <div className={styles.headerSection}>
-        <h1 className={styles.pageTitle}>Event History & Timeline</h1>
-        <p className={styles.pageSubtitle}>
-          View full history, step through updates, and check status over time.
-        </p>
-      </div>
-
       {/* Top Filter & Shipment Selector Header */}
       <TimelineHeader
         selectedId={selectedId}
@@ -289,15 +283,7 @@ export default function Timeline() {
         onExportCsv={() => exportTimelineCsv(selectedId, events)}
       />
 
-      {/* Stream Analytics Bar */}
-      <TimelineAnalyticsSummary
-        events={events}
-        filteredEvents={filteredEvents}
-        onJumpToGenesis={handleJumpToGenesis}
-        onJumpToHead={handleJumpToHead}
-      />
-
-      {/* State Scrubber & Time-Travel Player Dock (Phase 4) */}
+      {/* State Scrubber & Time-Travel Player Dock */}
       {events && events.length > 0 && (
         <TimelineStateScrubber
           currentVersion={activeVersion}
@@ -314,79 +300,122 @@ export default function Timeline() {
         />
       )}
 
-      {/* Point-in-time Reconstructed State Snapshot Card with Integrated State Diff (Phase 4 & 5) */}
-      {reconstructedState && (
-        <ReconstructedStateCard
-          state={reconstructedState}
-          prevState={prevState}
-          maxVersion={maxVersion}
-          isHead={activeVersion === maxVersion}
-          onResetToHead={handleResetToHead}
-        />
-      )}
-
-      {/* Sensor Telemetry & Anomaly Correlation Chart (Phase 5) */}
-      {events && events.length > 0 && showSensorChart && (
-        <SensorTimelineCorrelationChart
-          events={events}
-          currentVersion={activeVersion}
-          onSelectVersion={(v) => {
-            setScrubberVersion(v);
-            setIsPlaying(false);
-          }}
-        />
-      )}
-
-      {/* Main Timeline Stream Layout */}
-      <div className={styles.mainLayout}>
-        <div className={styles.streamCard}>
-          <div className={styles.streamHeader}>
-            <div className={styles.streamTitleGroup}>
-              <h3 className={styles.streamTitle}>Event Stream</h3>
-              <span className={styles.streamBadge}>
-                {filteredEvents.length} of {events?.length ?? 0}{' '}
-                {events?.length === 1 ? 'Event' : 'Events'}
-              </span>
+      {/* Master 2-Column Split Workspace */}
+      <div className={styles.workspaceGrid}>
+        {/* Left Column: Chronological Event Stream with Filter Toolbar */}
+        <div className={styles.leftColumn}>
+          <div className={styles.streamCard}>
+            <div className={styles.streamHeader}>
+              <div className={styles.streamTitleGroup}>
+                <h3 className={styles.streamTitle}>Audit Event Stream</h3>
+                <span className={styles.streamBadge}>
+                  {filteredEvents.length} of {events?.length ?? 0}{' '}
+                  {events?.length === 1 ? 'Event' : 'Events'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                Click any step to inspect
+              </div>
             </div>
 
-            <div className={styles.metaNotice}>
-              <div className={styles.metaDot} />
-              <span>Immutable Ledger Source of Truth (Event Sourcing)</span>
-            </div>
+            {/* Filter & Search Toolbar */}
+            {events && events.length > 0 && (
+              <TimelineFilterToolbar
+                events={events}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                selectedCategory={selectedCategory}
+                onCategoryChange={(cat) => {
+                  setSelectedCategory(cat);
+                  setAlertsOnly(false);
+                }}
+                alertsOnly={alertsOnly}
+                onToggleAlertsOnly={handleToggleAlertsOnly}
+                viewDensity={viewDensity}
+                onToggleDensity={handleToggleDensity}
+                onResetFilters={handleResetFilters}
+              />
+            )}
+
+            {/* Event List Stream */}
+            <TimelineStream
+              events={events}
+              filteredEvents={filteredEvents}
+              isLoading={isEventsLoading}
+              error={eventsError}
+              sortOrder={sortOrder}
+              viewDensity={viewDensity}
+              selectedVersion={activeVersion}
+              onSelectVersion={(v) => {
+                setScrubberVersion(v);
+                setIsPlaying(false);
+              }}
+              onInspect={handleInspectEvent}
+              onRetry={handleRefresh}
+              onResetFilters={handleResetFilters}
+            />
+          </div>
+        </div>
+
+        {/* Right Column: Sticky Point-in-time Inspector & Visual Analytics */}
+        <div className={styles.rightColumn}>
+          {/* Inspector Tab Switcher */}
+          <div className={styles.tabToggleRow}>
+            <button
+              type="button"
+              className={`${styles.toggleTabBtn} ${inspectorTab === 'state' ? styles.toggleTabActive : ''}`}
+              onClick={() => setInspectorTab('state')}
+            >
+              🔍 State & Diff (v{activeVersion})
+            </button>
+            <button
+              type="button"
+              className={`${styles.toggleTabBtn} ${inspectorTab === 'chart' ? styles.toggleTabActive : ''}`}
+              onClick={() => setInspectorTab('chart')}
+            >
+              📈 Sensor Chart
+            </button>
+            <button
+              type="button"
+              className={`${styles.toggleTabBtn} ${inspectorTab === 'stats' ? styles.toggleTabActive : ''}`}
+              onClick={() => setInspectorTab('stats')}
+            >
+              📊 Stream Stats
+            </button>
           </div>
 
-          {/* Interactive Filter & Search Toolbar */}
-          {events && events.length > 0 && (
-            <TimelineFilterToolbar
-              events={events}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              selectedCategory={selectedCategory}
-              onCategoryChange={(cat) => {
-                setSelectedCategory(cat);
-                setAlertsOnly(false);
-              }}
-              alertsOnly={alertsOnly}
-              onToggleAlertsOnly={handleToggleAlertsOnly}
-              viewDensity={viewDensity}
-              onToggleDensity={handleToggleDensity}
-              onResetFilters={handleResetFilters}
+          {/* Tab 1: Point-in-time Reconstructed State Snapshot & Mutation Diff */}
+          {inspectorTab === 'state' && reconstructedState && (
+            <ReconstructedStateCard
+              state={reconstructedState}
+              prevState={prevState}
+              maxVersion={maxVersion}
+              isHead={activeVersion === maxVersion}
+              onResetToHead={handleResetToHead}
             />
           )}
 
-          {/* Chronological Stream Track with Active Scrubber Highlight */}
-          <TimelineStream
-            events={events}
-            filteredEvents={filteredEvents}
-            isLoading={isEventsLoading}
-            error={eventsError}
-            sortOrder={sortOrder}
-            viewDensity={viewDensity}
-            selectedVersion={activeVersion}
-            onInspect={handleInspectEvent}
-            onRetry={handleRefresh}
-            onResetFilters={handleResetFilters}
-          />
+          {/* Tab 2: Sensor Telemetry & Anomaly Correlation Chart */}
+          {inspectorTab === 'chart' && events && events.length > 0 && (
+            <SensorTimelineCorrelationChart
+              events={events}
+              currentVersion={activeVersion}
+              onSelectVersion={(v) => {
+                setScrubberVersion(v);
+                setIsPlaying(false);
+              }}
+            />
+          )}
+
+          {/* Tab 3: Stream Analytics Summary */}
+          {inspectorTab === 'stats' && (
+            <TimelineAnalyticsSummary
+              events={events}
+              filteredEvents={filteredEvents}
+              onJumpToGenesis={handleJumpToGenesis}
+              onJumpToHead={handleJumpToHead}
+            />
+          )}
         </div>
       </div>
 

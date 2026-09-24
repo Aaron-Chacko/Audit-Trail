@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import EventBadge from '@/components/common/EventBadge.jsx';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
 import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
@@ -7,10 +8,31 @@ import styles from './EventInspectorModal.module.css';
 
 /**
  * EventInspectorModal
- * Simple inspector modal for reviewing details of an individual event.
+ * Simple inspector modal for reviewing details of an individual event with smooth anime.js transitions.
  */
 export default function EventInspectorModal({ event, onClose }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'audit'
+  const backdropRef = useRef(null);
+  const modalRef = useRef(null);
+
+  // Smooth entrance animation
+  useEffect(() => {
+    if (backdropRef.current && modalRef.current) {
+      anime({
+        targets: backdropRef.current,
+        opacity: [0, 1],
+        duration: 250,
+        easing: 'easeOutQuad',
+      });
+      anime({
+        targets: modalRef.current,
+        scale: [0.92, 1],
+        opacity: [0, 1],
+        duration: 350,
+        easing: 'easeOutExpo',
+      });
+    }
+  }, [event]);
 
   // Close on Escape key press & prevent background scroll
   useEffect(() => {
@@ -40,13 +62,14 @@ export default function EventInspectorModal({ event, onClose }) {
 
   return (
     <div
+      ref={backdropRef}
       className={styles.backdrop}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-event-title"
     >
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div ref={modalRef} className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Modal Top Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>

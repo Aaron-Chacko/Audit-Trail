@@ -1,8 +1,9 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 12, 18, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,9 +17,8 @@
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: scaleIn 0.2s ease;
 }
 
 .header {
@@ -50,16 +50,17 @@
 .closeBtn {
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--color-text-dim);
   font-size: var(--text-sm);
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
+  transition: all 0.15s ease;
 }
 
 .closeBtn:hover {
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-3);
 }
 
 .body {
@@ -71,7 +72,7 @@
 
 .intro {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text-dim);
   margin: 0;
 }
 
@@ -99,15 +100,14 @@
 }
 
 .key {
-  background: #0d1117;
-  border: 1px solid var(--color-border);
-  color: var(--color-accent-hover);
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border-hover);
+  color: #ffffff;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
 }
 
 .label {
@@ -117,8 +117,8 @@
 }
 
 .desc {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
   text-align: right;
 }
 
@@ -131,11 +131,11 @@
 }
 
 .gotItBtn {
-  background: var(--color-accent);
-  color: #fff;
+  background: #ffffff;
+  color: #000000;
   border: none;
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 700;
   padding: 6px 16px;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -143,16 +143,5 @@
 }
 
 .gotItBtn:hover {
-  background: var(--color-accent-hover);
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  background: #e4e4e7;
 }
