@@ -107,10 +107,10 @@
 }
 
 .pillActive {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: var(--color-accent);
-  color: #a5b4fc;
-  font-weight: 600;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  font-weight: 700;
 }
 
 .overviewCard {

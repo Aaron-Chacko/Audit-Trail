@@ -5,13 +5,26 @@
 export function formatShipmentResponse(shipment) {
   if (!shipment) return null;
 
+  const aggId = shipment.aggregateId || shipment.id;
+
   return {
-    id: shipment.aggregateId,
+    id: aggId,
+    aggregateId: aggId,
     status: shipment.status,
+    origin: shipment.origin ?? null,
     destination: shipment.destination ?? null,
-    temperature: shipment.temperature ?? null,
+    currentLocation: shipment.currentLocation ?? null,
+    vessel: shipment.vessel ?? null,
+    cargo: shipment.cargo ?? null,
+    sensorState: shipment.sensorState ?? {
+      temperature: shipment.temperature ?? null,
+      humidity: null,
+      recordedAt: null,
+    },
+    temperature: shipment.temperature ?? shipment.sensorState?.temperature ?? null,
     flags: {
       hasTemperatureSpike: !!shipment.flags?.hasTemperatureSpike,
+      hasHumidityAlert: !!shipment.flags?.hasHumidityAlert,
       customsHeld: !!shipment.flags?.customsHeld,
     },
     lastEventVersion: shipment.lastEventVersion ?? 0,
