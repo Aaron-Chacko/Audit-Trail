@@ -22,8 +22,7 @@ export default function Dashboard() {
 
   const [searchId, setSearchId] = useState(initialId);
   const [shipmentId, setShipmentId] = useState(initialId || null);
-
-  const { shipment, isLoading, error } = useShipment(shipmentId);
+  const { shipment, isLoading, error, refetch } = useShipment(shipmentId);
   const contentRef = useRef(null);
 
   const handleSearch = (event) => {
@@ -48,6 +47,17 @@ export default function Dashboard() {
     setShipmentId(id);
     setSearchParams({ id });
   };
+
+  // Listen for simulated events to auto-refresh live dashboard
+  useEffect(() => {
+    const handleSimulated = (e) => {
+      if (e.detail?.aggregateId === (shipment?.aggregateId || shipmentId)) {
+        refetch();
+      }
+    };
+    window.addEventListener('audit_trail_event_simulated', handleSimulated);
+    return () => window.removeEventListener('audit_trail_event_simulated', handleSimulated);
+  }, [shipment?.aggregateId, shipmentId, refetch]);
 
   // Stagger entrance animation when shipment loads
   useEffect(() => {

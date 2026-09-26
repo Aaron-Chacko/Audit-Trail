@@ -1,11 +1,22 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useSearchParams } from 'react-router-dom';
+import LiveSimulationModal from '../simulation/LiveSimulationModal.jsx';
 import styles from './PageWrapper.module.css';
 
 /**
   * components/layout/PageWrapper.jsx
-  * Shared layout shell used by every page.
+  * Shared layout shell used by every page with integrated Live Simulator.
   */
 export default function PageWrapper({ children }) {
+  const [searchParams] = useSearchParams();
+  const activeId = searchParams.get('id') || 'SHIP-10042';
+  const [isSimModalOpen, setIsSimModalOpen] = useState(false);
+
+  const handleEventSimulated = () => {
+    // Dispatch a global custom event or trigger page sync
+    window.dispatchEvent(new CustomEvent('audit_trail_event_simulated', { detail: { aggregateId: activeId } }));
+  };
+
   return (
     <>
       <header>
@@ -15,25 +26,37 @@ export default function PageWrapper({ children }) {
             <span>Audit Trail</span>
           </NavLink>
 
-          <div className={styles.nav}>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
-              }
+          <div className={styles.navRight}>
+            <button
+              type="button"
+              className={styles.simBtn}
+              onClick={() => setIsSimModalOpen(true)}
+              title="Open Live Scenario Simulator"
             >
-              Dashboard
-            </NavLink>
+              <span className={styles.simDot} />
+              <span>⚡ Live Simulator</span>
+            </button>
 
-            <NavLink
-              to="/timeline"
-              className={({ isActive }) =>
-                isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
-              }
-            >
-              Timeline
-            </NavLink>
+            <div className={styles.nav}>
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
+                }
+              >
+                Dashboard
+              </NavLink>
+
+              <NavLink
+                to="/timeline"
+                className={({ isActive }) =>
+                  isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
+                }
+              >
+                Timeline
+              </NavLink>
+            </div>
           </div>
         </nav>
       </header>
@@ -41,6 +64,14 @@ export default function PageWrapper({ children }) {
       <main className={styles.main}>
         {children}
       </main>
+
+      {/* Live Scenario Simulator Modal */}
+      <LiveSimulationModal
+        isOpen={isSimModalOpen}
+        onClose={() => setIsSimModalOpen(false)}
+        activeShipmentId={activeId}
+        onEventSimulated={handleEventSimulated}
+      />
     </>
   );
 }
