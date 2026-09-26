@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { createShipment, moveShipment, recordTemperature } from '../services/commands/shipment-command-service.js';
 import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema } from '../schemas/command-schemas.js';
+import { createShipment, moveShipment, recordTemperature, cancelShipment } from '../services/commands/shipment-command-service.js';
+import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema, cancelShipmentSchema } from '../schemas/command-schemas.js';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess, sendError } from '../utils/api-response.js';
 
@@ -81,6 +83,18 @@ router.post('/simulate', async (req, res) => {
       return sendError(res, 'aggregateId and scenario are required', 400);
     }
     const event = await simulateShipmentScenario({ aggregateId, scenario, customPayload });
+    sendSuccess(res, event, 201);
+  } catch (err) {
+    if (err.name === 'ConcurrencyError') {
+      return sendError(res, err.message, 409);
+    }
+    sendError(res, err.message, 500);
+  }
+});
+
+router.post('/shipments/:id/cancel', validate(cancelShipmentSchema), async (req, res) => {
+  try {
+    const event = await cancelShipment({ aggregateId: req.params.id, ...req.body });
     sendSuccess(res, event, 201);
   } catch (err) {
     if (err.name === 'ConcurrencyError') {

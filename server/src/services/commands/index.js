@@ -40,3 +40,4 @@ export {
 
 export { eventBus } from '../../events/event-subscription-bus.js';
 export { createShipment, moveShipment, recordTemperature } from './shipment-command-service.js';
+export { createShipment, moveShipment, recordTemperature, cancelShipment } from './shipment-command-service.js';
