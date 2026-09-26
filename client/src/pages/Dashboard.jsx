@@ -22,8 +22,7 @@ export default function Dashboard() {
 
   const [searchId, setSearchId] = useState(initialId);
   const [shipmentId, setShipmentId] = useState(initialId || null);
-
-  const { shipment, isLoading, error } = useShipment(shipmentId);
+  const { shipment, isLoading, error, refetch } = useShipment(shipmentId);
   const contentRef = useRef(null);
 
   const handleSearch = (event) => {

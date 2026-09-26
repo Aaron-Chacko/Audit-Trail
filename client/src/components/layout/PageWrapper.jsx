@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import LiveSimulationModal from '../simulation/LiveSimulationModal.jsx';
-import AiAssistantDrawer from '../ai/AiAssistantDrawer.jsx';
 import styles from './PageWrapper.module.css';
 
 /**
   * components/layout/PageWrapper.jsx
-  * Shared layout shell used by every page with integrated Live Simulator & AI Copilot.
+  * Shared layout shell used by every page with integrated Live Simulator.
   */
 export default function PageWrapper({ children }) {
   const [searchParams] = useSearchParams();
@@ -73,9 +72,6 @@ export default function PageWrapper({ children }) {
         activeShipmentId={activeId}
         onEventSimulated={handleEventSimulated}
       />
-
-      {/* AI Audit & Logistics Copilot */}
-      <AiAssistantDrawer activeShipmentId={activeId} />
     </>
   );
 }
