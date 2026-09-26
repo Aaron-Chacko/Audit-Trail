@@ -67,8 +67,40 @@ export function generateStreamProofManifest(aggregateId, events = []) {
   };
 }
 
+
+export function diffHashChains(eventsA = [], eventsB = []) {
+  const lenA = eventsA.length;
+  const lenB = eventsB.length;
+  const minLen = Math.min(lenA, lenB);
+
+  let divergesAt = null;
+  let prevHashA = GENESIS_HASH;
+  let prevHashB = GENESIS_HASH;
+
+  for (let i = 0; i < minLen; i++) {
+    const hashA = computeEventHash(eventsA[i], prevHashA);
+    const hashB = computeEventHash(eventsB[i], prevHashB);
+
+    if (hashA !== hashB) {
+      divergesAt = i;
+      break;
+    }
+
+    prevHashA = hashA;
+    prevHashB = hashB;
+  }
+
+  return {
+    identical: divergesAt === null && lenA === lenB,
+    divergesAtIndex: divergesAt,
+    streamALength: lenA,
+    streamBLength: lenB,
+  };
+}
+
 export default {
   computeEventHash,
   verifyStreamHashChain,
   generateStreamProofManifest,
+  diffHashChains,
 };

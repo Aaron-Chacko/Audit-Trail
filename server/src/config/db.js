@@ -18,3 +18,7 @@ export async function connectDB() {
     process.exit(1); // Hard exit — app cannot run without a DB
   }
 }
+
+export async function disconnectDB() {
+  await mongoose.disconnect();
+}

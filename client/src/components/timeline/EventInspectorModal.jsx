@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import EventBadge from '@/components/common/EventBadge.jsx';
 import { formatEventTimestamp, formatRelativeTime } from '@/utils/date-helpers.js';
 import { formatTemperature, formatHumidity, formatWeight } from '@/utils/formatters.js';
@@ -7,16 +8,31 @@ import styles from './EventInspectorModal.module.css';
 
 /**
  * EventInspectorModal
- * Detailed multi-tab inspector modal for deep ledger audit of individual events.
- *
- * @param {object} props
- * @param {object|null} props.event - The event being inspected
- * @param {Function} props.onClose - Modal close handler
+ * Simple inspector modal for reviewing details of an individual event with smooth anime.js transitions.
  */
 export default function EventInspectorModal({ event, onClose }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'payload' | 'metadata'
-  const [copiedSection, setCopiedSection] = useState(null);
-  const [payloadSearch, setPayloadSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'audit'
+  const backdropRef = useRef(null);
+  const modalRef = useRef(null);
+
+  // Smooth entrance animation
+  useEffect(() => {
+    if (backdropRef.current && modalRef.current) {
+      anime({
+        targets: backdropRef.current,
+        opacity: [0, 1],
+        duration: 250,
+        easing: 'easeOutQuad',
+      });
+      anime({
+        targets: modalRef.current,
+        scale: [0.92, 1],
+        opacity: [0, 1],
+        duration: 350,
+        easing: 'easeOutExpo',
+      });
+    }
+  }, [event]);
 
   // Close on Escape key press & prevent background scroll
   useEffect(() => {
@@ -44,56 +60,25 @@ export default function EventInspectorModal({ event, onClose }) {
   const isAlert = isAlertEvent(event.eventType);
   const category = getEventCategory(event.eventType);
 
-  const handleCopy = (text, sectionName) => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(typeof text === 'string' ? text : JSON.stringify(text, null, 2));
-      setCopiedSection(sectionName);
-      setTimeout(() => setCopiedSection(null), 2000);
-    }
-  };
-
-  // Filtered payload for search inside payload tab
-  const filteredPayload = useMemo(() => {
-    if (!payloadSearch.trim()) return payload;
-    const query = payloadSearch.toLowerCase();
-    const result = {};
-    for (const [key, val] of Object.entries(payload)) {
-      if (
-        key.toLowerCase().includes(query) ||
-        JSON.stringify(val).toLowerCase().includes(query)
-      ) {
-        result[key] = val;
-      }
-    }
-    return result;
-  }, [payload, payloadSearch]);
-
   return (
     <div
+      ref={backdropRef}
       className={styles.backdrop}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-event-title"
     >
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div ref={modalRef} className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Modal Top Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <span className={styles.versionChip}>Version {event.version}</span>
+            <span className={styles.versionChip}>Step {event.version}</span>
             <EventBadge eventType={event.eventType} size="lg" />
             <span className={styles.aggregateTag}>{event.aggregateId}</span>
           </div>
 
           <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.copyBtn}
-              onClick={() => handleCopy(event, 'full')}
-              title="Copy complete event envelope JSON"
-            >
-              {copiedSection === 'full' ? '✓ Copied Envelope' : '📋 Copy Event JSON'}
-            </button>
             <button
               type="button"
               className={styles.closeBtn}
@@ -112,21 +97,14 @@ export default function EventInspectorModal({ event, onClose }) {
             className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('overview')}
           >
-            📊 Overview & Highlights
+            📋 Event Details
           </button>
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'payload' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('payload')}
+            className={`${styles.tabBtn} ${activeTab === 'audit' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('audit')}
           >
-            📦 Payload Explorer
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${activeTab === 'metadata' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('metadata')}
-          >
-            🛡️ Ledger & OCC Metadata
+            🔒 Audit & System Info
           </button>
         </div>
 
@@ -255,68 +233,35 @@ export default function EventInspectorModal({ event, onClose }) {
             </div>
           )}
 
-          {/* ─── TAB 2: PAYLOAD EXPLORER ────────────────────────────────────── */}
-          {activeTab === 'payload' && (
-            <div className={styles.payloadTab}>
-              <div className={styles.payloadToolbar}>
-                <input
-                  type="text"
-                  className={styles.payloadSearchInput}
-                  placeholder="Filter payload keys or values..."
-                  value={payloadSearch}
-                  onChange={(e) => setPayloadSearch(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className={styles.copyBtn}
-                  onClick={() => handleCopy(payload, 'payload')}
-                >
-                  {copiedSection === 'payload' ? '✓ Copied Payload' : '📋 Copy JSON'}
-                </button>
-              </div>
-
-              <div className={styles.codeContainer}>
-                <pre className={styles.jsonCode}>
-                  <code>{JSON.stringify(filteredPayload, null, 2)}</code>
-                </pre>
-              </div>
-            </div>
-          )}
-
-          {/* ─── TAB 3: METADATA & OCC ───────────────────────────────────────── */}
-          {activeTab === 'metadata' && (
+          {/* ─── TAB 2: AUDIT INFO ───────────────────────────────────────── */}
+          {activeTab === 'audit' && (
             <div className={styles.metadataTab}>
               <div className={styles.sectionCard}>
-                <h5 className={styles.sectionTitle}>CQRS Tracing & Audit Identifiers</h5>
+                <h5 className={styles.sectionTitle}>System & Audit Info</h5>
                 <div className={styles.metaList}>
                   <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Correlation ID:</span>
-                    <code className={styles.metaVal}>{metadata.correlationId || 'corr-auto-generated'}</code>
+                    <span className={styles.metaKey}>Shipment ID:</span>
+                    <span className={styles.metaVal}>{event.aggregateId}</span>
                   </div>
                   <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Causation ID:</span>
-                    <code className={styles.metaVal}>{metadata.causationId || 'none (root trigger)'}</code>
+                    <span className={styles.metaKey}>Event Type:</span>
+                    <span className={styles.metaVal}>{event.eventType}</span>
                   </div>
                   <div className={styles.metaRow}>
                     <span className={styles.metaKey}>Triggered By:</span>
-                    <span className={styles.metaVal}>{metadata.triggeredBy || 'system:ledger-worker'}</span>
+                    <span className={styles.metaVal}>{metadata.triggeredBy || 'System'}</span>
                   </div>
                   <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Client IP:</span>
-                    <span className={styles.metaVal}>{metadata.clientIp || '127.0.0.1 (local)'}</span>
-                  </div>
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Schema Version:</span>
-                    <span className={styles.metaVal}>v{metadata.schemaVersion || 1}</span>
+                    <span className={styles.metaKey}>Reference ID:</span>
+                    <span className={styles.metaVal}>{metadata.correlationId || 'Auto-generated'}</span>
                   </div>
                 </div>
               </div>
 
               <div className={styles.integrityCard}>
-                <div className={styles.integrityBadge}>🛡️ Immutability Verified</div>
+                <div className={styles.integrityBadge}>🛡️ Record Verified & Protected</div>
                 <p className={styles.integrityText}>
-                  This event is cryptographically sealed in the append-only MongoDB Event Store.
-                  Mutations and deletes are blocked by model-level schema guards.
+                  This record is permanently saved in the database audit log. It cannot be altered or deleted.
                 </p>
               </div>
             </div>
@@ -325,11 +270,8 @@ export default function EventInspectorModal({ event, onClose }) {
 
         {/* Modal Footer */}
         <div className={styles.footer}>
-          <span className={styles.footerNote}>
-            Event ID: <code>{event.eventId || `${event.aggregateId}-v${event.version}`}</code>
-          </span>
           <button type="button" className={styles.doneBtn} onClick={onClose}>
-            Done
+            Close
           </button>
         </div>
       </div>

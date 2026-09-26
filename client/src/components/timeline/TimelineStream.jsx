@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import TimelineEventCard from './TimelineEventCard.jsx';
 import TimelineSkeleton from './TimelineSkeleton.jsx';
 import TimelineEmptyState from './TimelineEmptyState.jsx';
@@ -8,19 +9,7 @@ import styles from './TimelineStream.module.css';
 /**
  * TimelineStream
  * Renders the chronological event ledger stream with state indicators,
- * connecting tracks, sorting, and filter status.
- *
- * @param {object} props
- * @param {Array} props.events - Raw event objects from backend Event Store
- * @param {Array} [props.filteredEvents] - Events matching active search/filter
- * @param {boolean} props.isLoading - Whether event history is loading
- * @param {Error|null} props.error - API error if any
- * @param {'asc'|'desc'} [props.sortOrder='asc'] - 'asc' (oldest first) | 'desc' (newest first)
- * @param {'detailed'|'compact'} [props.viewDensity='detailed'] - Density layout mode
- * @param {number} [props.selectedVersion] - Currently active/scrubbed version
- * @param {Function} [props.onInspect] - Handler when an event card inspect is clicked
- * @param {Function} [props.onRetry] - Handler for retry action on error
- * @param {Function} [props.onResetFilters] - Handler to reset active filters
+ * connecting tracks, sorting, and filter status with anime.js cascade entrances.
  */
 export default function TimelineStream({
   events = [],
@@ -30,10 +19,12 @@ export default function TimelineStream({
   sortOrder = 'asc',
   viewDensity = 'detailed',
   selectedVersion = null,
+  onSelectVersion,
   onInspect,
   onRetry,
   onResetFilters,
 }) {
+  const streamRef = useRef(null);
   const activeEventsList = filteredEvents !== null ? filteredEvents : events;
 
   const sortedEvents = useMemo(() => {
@@ -45,6 +36,38 @@ export default function TimelineStream({
       return sortOrder === 'asc' ? vA - vB : vB - vA;
     });
   }, [activeEventsList, sortOrder]);
+
+  // Anime.js cascade entrance animation on events / filter change
+  useEffect(() => {
+    if (streamRef.current && sortedEvents.length > 0) {
+      const cards = streamRef.current.querySelectorAll('[id^="event-node-v"]');
+      if (cards.length > 0) {
+        anime({
+          targets: cards,
+          opacity: [0, 1],
+          translateX: [-18, 0],
+          delay: anime.stagger(35, { start: 50 }),
+          duration: 450,
+          easing: 'easeOutQuad',
+        });
+      }
+    }
+  }, [sortedEvents, viewDensity]);
+
+  // Highlight animation on selected version change
+  useEffect(() => {
+    if (selectedVersion != null && streamRef.current) {
+      const activeCard = streamRef.current.querySelector(`#event-node-v${selectedVersion}`);
+      if (activeCard) {
+        anime({
+          targets: activeCard,
+          scale: [0.98, 1],
+          duration: 350,
+          easing: 'easeOutElastic(1, .6)',
+        });
+      }
+    }
+  }, [selectedVersion]);
 
   if (isLoading && (!events || events.length === 0)) {
     return <TimelineSkeleton count={4} />;
@@ -89,7 +112,10 @@ export default function TimelineStream({
   const latestVersion = Math.max(...events.map((e) => e.version ?? 1));
 
   return (
-    <div className={`${styles.streamContainer} ${viewDensity === 'compact' ? styles.compactMode : ''}`}>
+    <div
+      ref={streamRef}
+      className={`${styles.streamContainer} ${viewDensity === 'compact' ? styles.compactMode : ''}`}
+    >
       {/* Stream Head Boundary Indicator */}
       <div className={styles.streamBoundary}>
         <div className={styles.boundaryDot} />
@@ -116,6 +142,7 @@ export default function TimelineStream({
               isLast={isLastInRender}
               isSelected={isSelected}
               onInspect={onInspect}
+              onSelect={onSelectVersion}
             />
           );
         })}

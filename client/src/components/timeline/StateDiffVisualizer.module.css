@@ -16,12 +16,11 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .icon {
-  font-size: var(--text-sm);
-  color: var(--color-warning);
+  font-size: var(--text-xs);
 }
 
 .title {
@@ -36,11 +35,11 @@
 .badge {
   font-family: var(--font-mono);
   font-size: 0.65rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-dim);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
 }
 
 .genesisBanner {
@@ -48,8 +47,8 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-xs);
-  color: #4ade80;
-  background: rgba(34, 197, 94, 0.08);
+  color: var(--color-success);
+  background: var(--color-success-bg);
   border: 1px solid rgba(34, 197, 94, 0.25);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
@@ -60,13 +59,11 @@
   height: 6px;
   border-radius: 50%;
   background: var(--color-success);
-  box-shadow: 0 0 6px var(--color-success);
 }
 
 .noChangeBanner {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  font-style: italic;
+  color: var(--color-text-dim);
   padding: var(--space-2) 0;
 }
 
@@ -89,8 +86,8 @@
 }
 
 .alertRow {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--color-danger-bg);
 }
 
 .fieldInfo {
@@ -109,11 +106,11 @@
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   border: 1px solid rgba(245, 158, 11, 0.3);
   padding: 1px 5px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 
 .transitionTrack {
@@ -125,24 +122,23 @@
 
 .prevVal {
   color: #f87171;
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   text-decoration: line-through;
   font-family: var(--font-mono);
 }
 
 .arrow {
-  color: var(--color-accent);
-  font-weight: 700;
-  font-size: 0.8rem;
+  color: var(--color-text-dim);
+  font-size: 0.75rem;
 }
 
 .currVal {
-  color: #4ade80;
-  background: rgba(34, 197, 94, 0.12);
+  color: var(--color-success);
+  background: var(--color-success-bg);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   font-weight: 600;
   font-family: var(--font-mono);
 }

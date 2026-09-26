@@ -1,25 +1,41 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import anime from '@/utils/anime.js';
 import { computeStateDiff } from '@/utils/state-diff.js';
 import styles from './StateDiffVisualizer.module.css';
 
 /**
  * StateDiffVisualizer
  * Visualizes the explicit field mutations and state deltas applied
- * between version N-1 and version N.
+ * between version N-1 and version N with anime.js row transitions.
  *
  * @param {object} props
  * @param {object|null} props.prevState - Reconstructed state at version N-1
  * @param {object} props.currState - Reconstructed state at version N
  */
 export default function StateDiffVisualizer({ prevState, currState }) {
+  const containerRef = useRef(null);
+
   const diff = useMemo(() => {
     return computeStateDiff(prevState, currState);
   }, [prevState, currState]);
 
+  useEffect(() => {
+    if (containerRef.current && diff.changes.length > 0) {
+      anime({
+        targets: containerRef.current.querySelectorAll(`.${styles.diffRow}`),
+        opacity: [0, 1],
+        translateX: [-12, 0],
+        delay: anime.stagger(40),
+        duration: 350,
+        easing: 'easeOutQuad',
+      });
+    }
+  }, [diff]);
+
   if (!currState) return null;
 
   return (
-    <div className={styles.container}>
+    <div ref={containerRef} className={styles.container}>
       <div className={styles.header}>
         <span className={styles.icon}>⚡</span>
         <h5 className={styles.title}>

@@ -56,9 +56,6 @@ if (env.nodeEnv === 'development') {
  * CQRS split:
  *   /api/commands  → write side (append events, mutate aggregate state via projection)
  *   /api/queries   → read side  (read from ShipmentReadModel, event history)
- *
- * Keeping distinct URL prefixes makes it immediately obvious from a request
- * whether you are on the write or read side — helps during code review and debugging.
  */
 app.use('/api/commands', commandRoutes);
 app.use('/api/queries', queryRoutes);

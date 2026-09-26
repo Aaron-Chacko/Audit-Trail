@@ -1,13 +1,11 @@
-import { createShipment } from '../services/commands/shipment-command-service.js';
-import { createShipmentSchema } from '../schemas/command-schemas.js';
-import { validate } from '../middleware/validate.js';
-import { sendSuccess, sendError } from '../utils/api-response.js';
-import { createShipment, moveShipment } from '../services/commands/shipment-command-service.js';
-import { createShipmentSchema, moveShipmentSchema } from '../schemas/command-schemas.js';
+import { Router } from 'express';
 import { createShipment, moveShipment, recordTemperature } from '../services/commands/shipment-command-service.js';
 import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema } from '../schemas/command-schemas.js';
 import { createShipment, moveShipment, recordTemperature, cancelShipment } from '../services/commands/shipment-command-service.js';
 import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema, cancelShipmentSchema } from '../schemas/command-schemas.js';
+import { validate } from '../middleware/validate.js';
+import { sendSuccess, sendError } from '../utils/api-response.js';
+
 /**
  * routes/command-routes.js
  *
@@ -21,8 +19,6 @@ import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema, canc
  *   1. Attach validation middleware
  *   2. Delegate to the appropriate command controller
  */
-
-import { Router } from 'express';
 
 // Controllers are added here as they are built in later sprints.
 // e.g.: import * as shipmentCommandController from '../controllers/commands/shipment-command-controller.js';
@@ -40,21 +36,19 @@ const router = Router();
 // router.post('/shipments/:id/temperature', validate(recordTemperatureSchema), shipmentCommandController.recordTemperature);
 
 // Health check for the command bus (useful during local development)
-router.get('/', (_req, res) => {
+router.get('/health', (_req, res) => {
   res.json({
     success: true,
     data: {
       side: 'command',
       status: 'ready',
-      description: 'Write-side command endpoints',
+      message: 'Command API is ready to accept write operations',
     },
     error: null,
   });
 });
 
-router.get('/health', (_req, res) => {
-  res.json({ success: true, data: { side: 'command', status: 'ready' }, error: null });
-});
+
 
 router.post('/shipments', validate(createShipmentSchema), async (req, res) => {
   try {
@@ -80,9 +74,15 @@ router.post('/shipments/:id/move', validate(moveShipmentSchema), async (req, res
   }
 });
 
-router.post('/shipments/:id/temperature', validate(recordTemperatureSchema), async (req, res) => {
+import { simulateShipmentScenario } from '../services/commands/simulation-service.js';
+
+router.post('/simulate', async (req, res) => {
   try {
-    const event = await recordTemperature({ aggregateId: req.params.id, ...req.body });
+    const { aggregateId, scenario, customPayload } = req.body;
+    if (!aggregateId || !scenario) {
+      return sendError(res, 'aggregateId and scenario are required', 400);
+    }
+    const event = await simulateShipmentScenario({ aggregateId, scenario, customPayload });
     sendSuccess(res, event, 201);
   } catch (err) {
     if (err.name === 'ConcurrencyError') {

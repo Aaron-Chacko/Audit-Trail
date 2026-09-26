@@ -56,6 +56,34 @@ class EventStoreMetrics {
     this.immutabilityViolations += 1;
   }
 
+  _percentile(sortedArr, p) {
+    if (sortedArr.length === 0) return 0;
+    const idx = Math.ceil((p / 100) * sortedArr.length) - 1;
+    return sortedArr[Math.min(Math.max(idx, 0), sortedArr.length - 1)];
+  }
+
+  getLatencyPercentiles() {
+    if (this.latenciesMs.length === 0) return { p50: 0, p95: 0, p99: 0 };
+    const sorted = [...this.latenciesMs].sort((a, b) => a - b);
+    return {
+      p50: this._percentile(sorted, 50),
+      p95: this._percentile(sorted, 95),
+      p99: this._percentile(sorted, 99),
+    };
+  }
+
+  getHealthStatus() {
+    const percentiles = this.getLatencyPercentiles();
+    const conflictRate = this.totalEventsAppended > 0
+      ? this.concurrencyConflicts / this.totalEventsAppended
+      : 0;
+
+    if (this.immutabilityViolations > 0) return 'CRITICAL';
+    if (percentiles.p99 > 2000 || conflictRate > 0.1) return 'DEGRADED';
+    if (percentiles.p95 > 500 || conflictRate > 0.05) return 'WARNING';
+    return 'HEALTHY';
+  }
+
   getSummary() {
     const avgLatency = this.latenciesMs.length > 0
       ? Number((this.latenciesMs.reduce((a, b) => a + b, 0) / this.latenciesMs.length).toFixed(2))
@@ -63,6 +91,7 @@ class EventStoreMetrics {
 
     const uptimeSeconds = Math.max(1, Math.floor((Date.now() - this.startedAt.getTime()) / 1000));
     const throughputPerSec = Number((this.totalEventsAppended / uptimeSeconds).toFixed(2));
+    const percentiles = this.getLatencyPercentiles();
 
     return {
       uptimeSeconds,
@@ -71,9 +100,11 @@ class EventStoreMetrics {
       totalBytesPersisted: this.totalBytesPersisted,
       throughputEventsPerSec: throughputPerSec,
       avgLatencyMs: avgLatency,
+      latencyPercentiles: percentiles,
       concurrencyConflicts: this.concurrencyConflicts,
       retryAttempts: this.retryAttempts,
       immutabilityViolations: this.immutabilityViolations,
+      healthStatus: this.getHealthStatus(),
       eventTypeDistribution: { ...this.eventTypeCounts },
       lastUpdated: new Date(),
     };

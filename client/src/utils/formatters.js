@@ -61,15 +61,20 @@ export function formatWeight(weightKg) {
  * @returns {{ label: string, variant: 'neutral'|'info'|'success'|'warning'|'danger' }}
  */
 export function formatShipmentStatus(status) {
+  if (!status) return { label: 'Unknown', variant: 'neutral' };
+  const key = String(status).toLowerCase().replace(/[\s-]+/g, '_');
   const map = {
-    created:    { label: 'Created',    variant: 'neutral' },
-    loaded:     { label: 'Loaded',     variant: 'info' },
-    in_transit: { label: 'In Transit', variant: 'info' },
-    arrived:    { label: 'Arrived',    variant: 'success' },
-    unloaded:   { label: 'Unloaded',   variant: 'success' },
-    cancelled:  { label: 'Cancelled',  variant: 'danger' },
+    created:            { label: 'Created',    variant: 'neutral' },
+    loaded:             { label: 'Loaded',     variant: 'info' },
+    loaded_on_ship:     { label: 'Loaded',     variant: 'info' },
+    in_transit:         { label: 'In Transit', variant: 'info' },
+    arrived:            { label: 'Arrived',    variant: 'success' },
+    arrived_at_port:    { label: 'Arrived',    variant: 'success' },
+    unloaded:           { label: 'Unloaded',   variant: 'success' },
+    container_unloaded: { label: 'Unloaded',   variant: 'success' },
+    cancelled:          { label: 'Cancelled',  variant: 'danger' },
   };
-  return map[status] ?? { label: status, variant: 'neutral' };
+  return map[key] ?? { label: status, variant: 'neutral' };
 }
 
 /**
