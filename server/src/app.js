@@ -19,6 +19,7 @@ import cors from 'cors';
 import { env } from './config/env.js';
 import commandRoutes from './routes/command-routes.js';
 import queryRoutes from './routes/query-routes.js';
+import aiRoutes from './routes/ai-routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { correlationMiddleware } from './middleware/correlation.js';
 
@@ -56,12 +57,11 @@ if (env.nodeEnv === 'development') {
  * CQRS split:
  *   /api/commands  → write side (append events, mutate aggregate state via projection)
  *   /api/queries   → read side  (read from ShipmentReadModel, event history)
- *
- * Keeping distinct URL prefixes makes it immediately obvious from a request
- * whether you are on the write or read side — helps during code review and debugging.
+ *   /api/ai        → domain intelligence copilot
  */
 app.use('/api/commands', commandRoutes);
 app.use('/api/queries', queryRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Top-level health check (for load balancers / Docker health checks)
 app.get('/', (_req, res) => {

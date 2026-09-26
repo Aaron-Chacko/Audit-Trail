@@ -168,6 +168,17 @@ export default function Timeline() {
     }
   };
 
+  // Auto-refresh when an event is simulated via the Simulation Hub
+  useEffect(() => {
+    const handleSimulated = (e) => {
+      if (e.detail?.aggregateId === selectedId) {
+        Promise.allSettled([refetchShipment(), refetchHistory()]);
+      }
+    };
+    window.addEventListener('audit_trail_event_simulated', handleSimulated);
+    return () => window.removeEventListener('audit_trail_event_simulated', handleSimulated);
+  }, [selectedId, refetchShipment, refetchHistory]);
+
   const handleInspectEvent = (event) => {
     setInspectingEvent(event);
   };

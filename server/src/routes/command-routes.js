@@ -74,9 +74,15 @@ router.post('/shipments/:id/move', validate(moveShipmentSchema), async (req, res
   }
 });
 
-router.post('/shipments/:id/temperature', validate(recordTemperatureSchema), async (req, res) => {
+import { simulateShipmentScenario } from '../services/commands/simulation-service.js';
+
+router.post('/simulate', async (req, res) => {
   try {
-    const event = await recordTemperature({ aggregateId: req.params.id, ...req.body });
+    const { aggregateId, scenario, customPayload } = req.body;
+    if (!aggregateId || !scenario) {
+      return sendError(res, 'aggregateId and scenario are required', 400);
+    }
+    const event = await simulateShipmentScenario({ aggregateId, scenario, customPayload });
     sendSuccess(res, event, 201);
   } catch (err) {
     if (err.name === 'ConcurrencyError') {

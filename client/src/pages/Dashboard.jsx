@@ -49,6 +49,17 @@ export default function Dashboard() {
     setSearchParams({ id });
   };
 
+  // Listen for simulated events to auto-refresh live dashboard
+  useEffect(() => {
+    const handleSimulated = (e) => {
+      if (e.detail?.aggregateId === (shipment?.aggregateId || shipmentId)) {
+        refetch();
+      }
+    };
+    window.addEventListener('audit_trail_event_simulated', handleSimulated);
+    return () => window.removeEventListener('audit_trail_event_simulated', handleSimulated);
+  }, [shipment?.aggregateId, shipmentId, refetch]);
+
   // Stagger entrance animation when shipment loads
   useEffect(() => {
     if (shipment && !isLoading && contentRef.current) {
