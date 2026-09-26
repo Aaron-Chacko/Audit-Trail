@@ -43,3 +43,16 @@ export async function recordTemperature({ aggregateId, temperature, threshold, u
 
   return event;
 }
+
+export async function cancelShipment({ aggregateId, reason, cancelledBy }) {
+  const currentVersion = await getAggregateVersion(aggregateId);
+
+  const event = await appendEvent({
+    aggregateId,
+    eventType: SHIPMENT_CANCELLED,
+    payload: { reason, cancelledBy },
+    expectedVersion: currentVersion,
+  });
+
+  return event;
+}

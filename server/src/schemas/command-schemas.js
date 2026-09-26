@@ -25,3 +25,9 @@ export const moveShipmentSchema = Joi.object({
   terminal: Joi.string().trim().optional().allow(null, ''),
   details: Joi.string().trim().optional().allow(null, ''),
 });
+
+export const cancelShipmentSchema = Joi.object({
+  aggregateId: Joi.string().trim().required(),
+  reason: Joi.string().trim().required(),
+  cancelledBy: Joi.string().trim().optional(),
+});
