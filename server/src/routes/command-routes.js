@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { createShipment, moveShipment, recordTemperature } from '../services/commands/shipment-command-service.js';
-import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema } from '../schemas/command-schemas.js';
 import { createShipment, moveShipment, recordTemperature, cancelShipment } from '../services/commands/shipment-command-service.js';
 import { createShipmentSchema, moveShipmentSchema, recordTemperatureSchema, cancelShipmentSchema } from '../schemas/command-schemas.js';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess, sendError } from '../utils/api-response.js';
+import { simulateShipmentScenario } from '../services/commands/simulation-service.js';
 
 /**
  * routes/command-routes.js
@@ -74,8 +73,6 @@ router.post('/shipments/:id/move', validate(moveShipmentSchema), async (req, res
   }
 });
 
-import { simulateShipmentScenario } from '../services/commands/simulation-service.js';
-
 router.post('/simulate', async (req, res) => {
   try {
     const { aggregateId, scenario, customPayload } = req.body;
@@ -95,6 +92,18 @@ router.post('/simulate', async (req, res) => {
 router.post('/shipments/:id/cancel', validate(cancelShipmentSchema), async (req, res) => {
   try {
     const event = await cancelShipment({ aggregateId: req.params.id, ...req.body });
+    sendSuccess(res, event, 201);
+  } catch (err) {
+    if (err.name === 'ConcurrencyError') {
+      return sendError(res, err.message, 409);
+    }
+    sendError(res, err.message, 500);
+  }
+});
+
+router.post('/shipments/:id/temperature', validate(recordTemperatureSchema), async (req, res) => {
+  try {
+    const event = await recordTemperature({ aggregateId: req.params.id, ...req.body });
     sendSuccess(res, event, 201);
   } catch (err) {
     if (err.name === 'ConcurrencyError') {
