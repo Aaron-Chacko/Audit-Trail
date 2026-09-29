@@ -67,8 +67,14 @@ router.get('/shipments/:id', async (req, res) => {
 
 router.get('/shipments/:id/history', async (req, res) => {
   try {
+    const MAX_TIMELINE_EVENTS = 6;
     const history = await getEventTimeline(req.params.id);
-    sendSuccess(res, history);
+
+    // Cap at the most recent 6 events (sorted ascending by version, take last 6)
+    const sorted = [...history].sort((a, b) => (a.version ?? 0) - (b.version ?? 0));
+    const capped = sorted.slice(-MAX_TIMELINE_EVENTS);
+
+    sendSuccess(res, capped);
   } catch (err) {
     sendError(res, err.message || 'Failed to fetch event history', 500);
   }
