@@ -33,7 +33,8 @@ export default function LiveSimulationModal({
 
   const addLog = (msg, isSuccess = true) => {
     const time = new Date().toLocaleTimeString();
-    setLogs((prev) => [`[${time}] ${msg}`, ...prev.slice(0, 15)]);
+    // Store as object so the render can colour error lines differently
+    setLogs((prev) => [{ text: `[${time}] ${msg}`, isSuccess }, ...prev.slice(0, 15)]);
   };
 
   const handleTriggerScenario = async (scenario, label) => {
@@ -221,9 +222,15 @@ export default function LiveSimulationModal({
                 logs.map((log, idx) => (
                   <span
                     key={idx}
-                    className={idx === 0 ? styles.logHighlight : styles.logEntry}
+                    className={
+                      idx === 0
+                        ? styles.logHighlight
+                        : log.isSuccess === false
+                          ? styles.logError
+                          : styles.logEntry
+                    }
                   >
-                    {log}
+                    {log.text}
                   </span>
                 ))
               )}

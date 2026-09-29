@@ -1,5 +1,11 @@
 import { appendEvent, getAggregateVersion } from './event-store-service.js';
-import { CONTAINER_CREATED, LOADED_ON_SHIP, ARRIVED_AT_PORT } from '../../events/event-types.js';
+import {
+  CONTAINER_CREATED,
+  LOADED_ON_SHIP,
+  ARRIVED_AT_PORT,
+  TEMPERATURE_SPIKE,
+  SHIPMENT_CANCELLED,
+} from '../../events/event-types.js';
 
 export async function createShipment({ aggregateId, destination, type, maxCapacity }) {
   const event = await appendEvent({
