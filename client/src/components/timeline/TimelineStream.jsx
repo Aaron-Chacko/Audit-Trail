@@ -76,7 +76,7 @@ export default function TimelineStream({
   if (error) {
     return (
       <div className={styles.errorWrapper}>
-        <ErrorMessage message={error.message || 'Failed to load event timeline.'} />
+        <ErrorMessage error={error} />
         {onRetry && (
           <button type="button" className={styles.retryBtn} onClick={onRetry}>
             Try Again

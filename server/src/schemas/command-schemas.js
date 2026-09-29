@@ -1,12 +1,8 @@
 import Joi from 'joi';
 
-export const recordTemperatureSchema = Joi.object({
-  aggregateId: Joi.string().trim().required(),
-  temperature: Joi.number().required(),
-  threshold: Joi.number().optional(),
-  unit: Joi.string().trim().default('C'),
-  sensorId: Joi.string().trim().optional(),
-});
+// aggregateId is NOT included in per-shipment schemas — it is extracted from
+// req.params.id by the route layer, not the request body. Only createShipment
+// needs it in the body because there is no :id URL param for that route.
 
 export const createShipmentSchema = Joi.object({
   aggregateId: Joi.string().trim().required(),
@@ -16,7 +12,6 @@ export const createShipmentSchema = Joi.object({
 });
 
 export const moveShipmentSchema = Joi.object({
-  aggregateId: Joi.string().trim().required(),
   toStatus: Joi.string().valid('LOADED_ON_SHIP', 'ARRIVED_AT_PORT').required(),
   vesselId: Joi.string().trim().optional().allow(null, ''),
   port: Joi.string().trim().optional().allow(null, ''),
@@ -26,8 +21,14 @@ export const moveShipmentSchema = Joi.object({
   details: Joi.string().trim().optional().allow(null, ''),
 });
 
+export const recordTemperatureSchema = Joi.object({
+  temperature: Joi.number().required(),
+  threshold: Joi.number().optional(),
+  unit: Joi.string().trim().default('C'),
+  sensorId: Joi.string().trim().optional(),
+});
+
 export const cancelShipmentSchema = Joi.object({
-  aggregateId: Joi.string().trim().required(),
   reason: Joi.string().trim().required(),
   cancelledBy: Joi.string().trim().optional(),
 });
